@@ -11,19 +11,16 @@ public sealed class ActionDefinition
     public string Description { get; init; } = "";
 }
 
-/// <summary>
-/// Phase 1: catalog of actions. Mutating execute comes in a later phase with confirm + rollback.
-/// </summary>
 public static class ActionCatalog
 {
     public static IReadOnlyList<ActionDefinition> All { get; } =
     [
         new() { Id = "FlushDns", Title = "Flush DNS", Risk = ActionRisk.Low, IsAdvisoryOnly = false,
-            Description = "ipconfig /flushdns" },
+            Description = "ipconfig /flushdns + resolve verify" },
+        new() { Id = "RenewDhcp", Title = "Renew DHCP", Risk = ActionRisk.Medium, IsAdvisoryOnly = false,
+            Description = "ipconfig /release then /renew + gateway verify" },
         new() { Id = "SetAdapterDnsPublic", Title = "Set public DNS", Risk = ActionRisk.Medium, IsAdvisoryOnly = true,
-            Description = "Preview only in Phase 1 — no write yet." },
-        new() { Id = "RenewDhcp", Title = "Renew DHCP", Risk = ActionRisk.Medium, IsAdvisoryOnly = true,
-            Description = "ipconfig /release + /renew (not auto-run yet)." },
+            Description = "Guidance: set 1.1.1.1 / 8.8.8.8 on active adapter via ncpa.cpl or netsh (not auto)." },
         new() { Id = "ReportProxyOnly", Title = "Report proxy", Risk = ActionRisk.Low, IsAdvisoryOnly = true,
             Description = "Show proxy facts only." },
         new() { Id = "AdviseRouterDns", Title = "Advise router DNS", Risk = ActionRisk.Low, IsAdvisoryOnly = true,
@@ -39,6 +36,6 @@ public static class ActionCatalog
         new() { Id = "AdvisePhysical", Title = "Advise physical", Risk = ActionRisk.Low, IsAdvisoryOnly = true,
             Description = "Cable / Wi-Fi / airplane mode." },
         new() { Id = "AdviseEnableAdapter", Title = "Advise enable NIC", Risk = ActionRisk.Medium, IsAdvisoryOnly = true,
-            Description = "Enable disabled adapter (future execute)." },
+            Description = "Enable disabled adapter." },
     ];
 }
