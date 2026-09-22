@@ -7,22 +7,38 @@
         Background="{StaticResource BgCanvas}"
         FontFamily="Segoe UI"
         WindowStartupLocation="CenterScreen">
+  <Window.Resources>
+    <Style x:Key="NavButton" TargetType="Button">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+      <Setter Property="FontSize" Value="16"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="Padding" Value="0,6"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
   <DockPanel>
     <Border DockPanel.Dock="Top" Background="{StaticResource BgSurface}" BorderBrush="{StaticResource Stroke}" BorderThickness="0,0,0,1" Padding="16,12">
       <Grid>
-        <TextBlock Text="NETOPS TOOLBOX" FontWeight="SemiBold" FontSize="14" LetterSpacing="1" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
+        <TextBlock Text="NETOPS TOOLBOX" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
         <Border HorizontalAlignment="Right" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Padding="8,4">
           <TextBlock Text="ADMIN" FontSize="11" Foreground="{StaticResource TextPrimary}"/>
         </Border>
       </Grid>
     </Border>
-
     <Border DockPanel.Dock="Bottom" Background="{StaticResource BgSurface}" BorderBrush="{StaticResource Stroke}" BorderThickness="0,1,0,0" Padding="16,8">
       <TextBlock x:Name="StatusText" Text="NetOps Toolbox · Minimal Mono · Elevated session" FontSize="11" Foreground="{StaticResource TextMuted}"/>
     </Border>
-
     <Border DockPanel.Dock="Left" Width="180" Background="{StaticResource BgSurface}" BorderBrush="{StaticResource Stroke}" BorderThickness="0,0,1,0" Padding="16,24">
-      <StackPanel x:Name="NavPanel">
+      <StackPanel>
         <Button Content="Dashboard" Style="{StaticResource NavButton}" Tag="Dashboard" Click="Nav_Click"/>
         <Button Content="Devices" Style="{StaticResource NavButton}" Tag="Devices" Click="Nav_Click"/>
         <Button Content="Tools" Style="{StaticResource NavButton}" Tag="Tools" Click="Nav_Click"/>
@@ -33,7 +49,6 @@
         <Button Content="Settings" Style="{StaticResource NavButton}" Tag="Settings" Click="Nav_Click"/>
       </StackPanel>
     </Border>
-
     <Grid Margin="28,24">
       <StackPanel x:Name="ContentDashboard">
         <UniformGrid Columns="4" Margin="0,0,0,24">
@@ -69,7 +84,6 @@
         <TextBlock Text="RECENT JOBS" FontSize="11" Foreground="{StaticResource TextMuted}" Margin="0,0,0,8"/>
         <TextBlock x:Name="JobsText" Text="—" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource TextPrimary}"/>
       </StackPanel>
-
       <StackPanel x:Name="ContentDevices" Visibility="Collapsed">
         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
           <ComboBox x:Name="BrandBox" Width="160" Margin="0,0,8,0"/>
@@ -79,7 +93,6 @@
         </StackPanel>
         <ListBox x:Name="DeviceList" BorderBrush="{StaticResource Stroke}" FontFamily="Consolas" FontSize="12"/>
       </StackPanel>
-
       <TextBlock x:Name="ContentOther" Visibility="Collapsed" TextWrapping="Wrap" Foreground="{StaticResource TextMuted}" FontSize="14"/>
     </Grid>
   </DockPanel>
