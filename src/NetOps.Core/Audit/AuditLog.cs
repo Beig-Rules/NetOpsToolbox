@@ -16,14 +16,18 @@ public sealed class AuditLog
 
     public void Record(string actionId, string outcome, string detail)
     {
+        // Never store passwords
+        var safe = detail;
+        if (safe.Contains("password", StringComparison.OrdinalIgnoreCase))
+            safe = "[redacted detail]";
+
         _entries.Enqueue(new AuditEntry
         {
             ActionId = actionId,
             Outcome = outcome,
-            Detail = detail
+            Detail = safe.Length > 500 ? safe[..500] + "…" : safe
         });
     }
 
-    public IReadOnlyList<AuditEntry> Snapshot()
-        => _entries.ToArray();
+    public IReadOnlyList<AuditEntry> Snapshot() => _entries.ToArray();
 }
