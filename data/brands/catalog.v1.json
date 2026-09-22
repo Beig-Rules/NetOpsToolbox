@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "brands": [
+    {"id": "huawei", "name": "Huawei", "classes": ["AdslModem", "FiberOnt", "Router", "Ap"]},
+    {"id": "tp-link", "name": "TP-Link", "classes": ["AdslModem", "FiberOnt", "Router", "Ap", "Switch"]},
+    {"id": "d-link", "name": "D-Link", "classes": ["AdslModem", "Router", "Ap", "Switch"]},
+    {"id": "asus", "name": "ASUS", "classes": ["Router", "Ap"]},
+    {"id": "mikrotik", "name": "MikroTik", "classes": ["Router", "Switch", "Ap"]},
+    {"id": "cisco", "name": "Cisco", "classes": ["Router", "Switch", "Ap"]},
+    {"id": "zyxel", "name": "Zyxel", "classes": ["AdslModem", "FiberOnt", "Router", "Switch"]},
+    {"id": "zte", "name": "ZTE", "classes": ["AdslModem", "FiberOnt", "Router"]},
+    {"id": "netgear", "name": "Netgear", "classes": ["Router", "Ap", "Switch"]},
+    {"id": "linksys", "name": "Linksys", "classes": ["Router", "Ap"]},
+    {"id": "ubiquiti", "name": "Ubiquiti", "classes": ["Router", "Switch", "Ap"]},
+    {"id": "other", "name": "Other", "classes": ["Router", "Switch", "Ap", "AdslModem", "FiberOnt"]}
+  ],
+  "models": [
+    {"brand": "huawei", "model": "HG-series (ADSL)", "class": "AdslModem", "protocols": ["https", "http"], "flash": "web_upload"},
+    {"brand": "huawei", "model": "EchoLife ONT", "class": "FiberOnt", "protocols": ["https"], "flash": "web_upload"},
+    {"brand": "tp-link", "model": "TD/Archer modem-router", "class": "AdslModem", "protocols": ["https", "http"], "flash": "web_upload"},
+    {"brand": "tp-link", "model": "Archer router", "class": "Router", "protocols": ["https", "http"], "flash": "web_upload"},
+    {"brand": "d-link", "model": "DSL series", "class": "AdslModem", "protocols": ["https", "http"], "flash": "web_upload"},
+    {"brand": "asus", "model": "RT / ZenWiFi", "class": "Router", "protocols": ["https"], "flash": "web_upload"},
+    {"brand": "mikrotik", "model": "RouterOS (generic)", "class": "Router", "protocols": ["ssh", "api"], "flash": "ssh"},
+    {"brand": "cisco", "model": "IOS / IOS-XE", "class": "Router", "protocols": ["ssh"], "flash": "ssh"},
+    {"brand": "other", "model": "Custom / Unknown", "class": "Router", "protocols": ["https", "ssh"], "flash": "manual_only"}
+  ]
+}
