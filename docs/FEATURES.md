@@ -2,19 +2,25 @@
 
 | Area | Status |
 |------|--------|
-| Diagnose flows | DNS_FAIL, NET_NO_WAN, ROUTE_BROKEN, NET_NO_LAN |
-| Actions live | FlushDns, RenewDhcp, SetAdapterDnsPublic |
+| Diagnose | 4 flows + ranked solutions |
+| Actions | FlushDns, RenewDhcp, SetAdapterDnsPublic |
 | Tools | Ping, DNS, Port, Traceroute, Subnet |
 | Firmware | Catalog diagnose (no auto-flash) |
-| Security | ARP scan, baseline, new-host diff |
+| Security | ARP baseline + new host diff |
 | Playbooks | Harden, NTP/DNS, WAN triage |
-| Reports | TXT + **CSV** to Desktop |
-| Devices | **MikroTik SSH** identity + `/export` backup to Documents |
-| Registry | Proxy + Tcpip read-only |
+| Reports | TXT + CSV |
+| MikroTik SSH | Identity + `/export` |
+| **Cisco SSH** | `show version`, `show running-config` → file |
+| **Vault** | DPAPI CurrentUser (`vault.json`) |
 
-## MikroTik backup
+## Vault
 
-- Package: SSH.NET
-- Command: `/export show-sensitive=no terse`
-- Output: `Documents\\NetOpsToolbox\\backups\\mikrotik-*.rsc`
-- Password: in-memory only (PasswordBox); not written to audit in clear text
+- Path: `%LocalAppData%\NetOpsToolbox\vault.json`
+- Password: `ProtectedData` + entropy `NetOpsToolbox.Vault.v1`
+- Scope: same Windows user only
+
+## Cisco notes
+
+- Shell stream + `terminal length 0`
+- Privilege 15 / AAA may be required for `show running-config`
+- Enable password flows not automated in this build (use user with privilege)

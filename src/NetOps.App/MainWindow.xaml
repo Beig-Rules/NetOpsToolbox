@@ -1,7 +1,7 @@
 <Window x:Class="NetOps.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="NetOps Toolbox" Height="760" Width="1120" MinHeight="500" MinWidth="820"
+        Title="NetOps Toolbox" Height="780" Width="1140" MinHeight="520" MinWidth="860"
         Background="{StaticResource BgCanvas}" FontFamily="Segoe UI" WindowStartupLocation="CenterScreen">
   <Window.Resources>
     <Style x:Key="NavButton" TargetType="Button">
@@ -54,39 +54,43 @@
 
       <DockPanel x:Name="ContentDevices" Visibility="Collapsed">
         <StackPanel DockPanel.Dock="Top">
-          <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-            <ComboBox x:Name="BrandBox" Width="140" Margin="0,0,8,0"/>
-            <ComboBox x:Name="ModelBox" Width="160" Margin="0,0,8,0"/>
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <ComboBox x:Name="BrandBox" Width="130" Margin="0,0,8,0"/>
+            <ComboBox x:Name="ModelBox" Width="150" Margin="0,0,8,0"/>
             <TextBox x:Name="IpBox" Width="120" Margin="0,0,8,0" FontFamily="Consolas" Text="192.168.88.1"/>
             <Button Content="Add device" Padding="10,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="AddDevice_Click"/>
           </StackPanel>
-          <TextBlock Text="MikroTik SSH (password not stored)" FontSize="11" Foreground="{StaticResource TextMuted}" Margin="0,0,0,6"/>
-          <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-            <TextBox x:Name="SshUserBox" Width="100" Margin="0,0,8,0" Text="admin"/>
-            <PasswordBox x:Name="SshPassBox" Width="120" Margin="0,0,8,0"/>
-            <TextBox x:Name="SshPortBox" Width="50" Margin="0,0,8,0" FontFamily="Consolas" Text="22"/>
-            <Button Content="Test SSH" Padding="10,6" Margin="0,0,8,0" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="MikrotikTest_Click"/>
-            <Button Content="Export backup" Padding="10,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="MikrotikBackup_Click"/>
+          <TextBlock Text="SSH · password optional via vault (DPAPI)" FontSize="11" Foreground="{StaticResource TextMuted}" Margin="0,0,0,4"/>
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+            <TextBox x:Name="SshUserBox" Width="90" Margin="0,0,6,0" Text="admin"/>
+            <PasswordBox x:Name="SshPassBox" Width="110" Margin="0,0,6,0"/>
+            <TextBox x:Name="SshPortBox" Width="44" Margin="0,0,6,0" FontFamily="Consolas" Text="22"/>
+            <Button Content="Save vault" Padding="8,5" Margin="0,0,6,0" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="VaultSave_Click"/>
+            <Button Content="Load vault" Padding="8,5" Margin="0,0,6,0" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="VaultLoad_Click"/>
           </StackPanel>
-          <ListBox x:Name="DeviceList" Height="100" BorderBrush="{StaticResource Stroke}" FontFamily="Consolas" FontSize="12" Margin="0,0,0,10"/>
+          <WrapPanel Margin="0,0,0,8">
+            <Button Content="MT Test" Padding="8,5" Margin="0,0,6,4" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="MikrotikTest_Click"/>
+            <Button Content="MT Export" Padding="8,5" Margin="0,0,6,4" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="MikrotikBackup_Click"/>
+            <Button Content="Cisco Version" Padding="8,5" Margin="0,0,6,4" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="CiscoVersion_Click"/>
+            <Button Content="Cisco show run" Padding="8,5" Margin="0,0,6,4" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="CiscoShowRun_Click"/>
+          </WrapPanel>
+          <ListBox x:Name="DeviceList" Height="72" BorderBrush="{StaticResource Stroke}" FontFamily="Consolas" FontSize="12" Margin="0,0,0,8"/>
         </StackPanel>
         <ScrollViewer>
           <TextBlock x:Name="DeviceSshOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}"
-                     Text="Select MikroTik brand, set IP, enter SSH user/password, then Test or Export."/>
+                     Text="MikroTik or Cisco SSH. Vault stores password with DPAPI (this Windows user only)."/>
         </ScrollViewer>
       </DockPanel>
 
       <DockPanel x:Name="ContentDiagnose" Visibility="Collapsed">
         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,12">
           <Button Content="Run diagnosis" Padding="12,7" Margin="0,0,8,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="RunDiagnose_Click"/>
-          <Button Content="Flush DNS" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Background="{StaticResource BgSurface}" Click="ApplyFlushDns_Click"/>
-          <Button Content="Renew DHCP" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Background="{StaticResource BgSurface}" Click="ApplyRenewDhcp_Click"/>
-          <Button Content="Set DNS 1.1.1.1" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Background="{StaticResource BgSurface}" Click="ApplySetDns_Click"/>
+          <Button Content="Flush DNS" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ApplyFlushDns_Click"/>
+          <Button Content="Renew DHCP" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ApplyRenewDhcp_Click"/>
+          <Button Content="Set DNS 1.1.1.1" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ApplySetDns_Click"/>
           <TextBlock x:Name="DiagnoseBusy" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
         </WrapPanel>
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-          <TextBlock x:Name="DiagnoseOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Run diagnosis or apply actions."/>
-        </ScrollViewer>
+        <ScrollViewer><TextBlock x:Name="DiagnoseOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Run diagnosis."/></ScrollViewer>
       </DockPanel>
 
       <DockPanel x:Name="ContentTools" Visibility="Collapsed">
@@ -108,7 +112,7 @@
           <TextBox x:Name="FwVersionBox" Margin="0,0,0,8" FontFamily="Consolas" Text="(optional current version)"/>
           <Button Content="Diagnose firmware" Padding="12,7" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" HorizontalAlignment="Left" Click="FirmwareDiagnose_Click"/>
         </StackPanel>
-        <ScrollViewer><TextBlock x:Name="FirmwareOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Select brand/model on Devices, then diagnose."/></ScrollViewer>
+        <ScrollViewer><TextBlock x:Name="FirmwareOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Firmware diagnose."/></ScrollViewer>
       </DockPanel>
 
       <DockPanel x:Name="ContentSecurity" Visibility="Collapsed">
@@ -117,7 +121,7 @@
           <Button Content="Save baseline" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="SecuritySave_Click"/>
           <Button Content="Diff vs baseline" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="SecurityDiff_Click"/>
         </WrapPanel>
-        <ScrollViewer><TextBlock x:Name="SecurityOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Scan ARP table, save baseline, detect new hosts."/></ScrollViewer>
+        <ScrollViewer><TextBlock x:Name="SecurityOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="LAN baseline."/></ScrollViewer>
       </DockPanel>
 
       <DockPanel x:Name="ContentPlaybooks" Visibility="Collapsed">
@@ -125,7 +129,7 @@
           <ComboBox x:Name="PlaybookBox" Margin="0,0,0,8"/>
           <Button Content="Show playbook" Padding="12,7" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" HorizontalAlignment="Left" Click="PlaybookShow_Click"/>
         </StackPanel>
-        <ScrollViewer><TextBlock x:Name="PlaybookOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Select a playbook."/></ScrollViewer>
+        <ScrollViewer><TextBlock x:Name="PlaybookOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Playbooks."/></ScrollViewer>
       </DockPanel>
 
       <DockPanel x:Name="ContentReports" Visibility="Collapsed">
@@ -136,7 +140,7 @@
             <Button Content="Save CSV" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ReportSaveCsv_Click"/>
           </WrapPanel>
         </StackPanel>
-        <ScrollViewer><TextBlock x:Name="ReportOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Generate combines diagnosis, LAN, audit."/></ScrollViewer>
+        <ScrollViewer><TextBlock x:Name="ReportOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Reports."/></ScrollViewer>
       </DockPanel>
 
       <TextBlock x:Name="ContentOther" Visibility="Collapsed" TextWrapping="Wrap" Foreground="{StaticResource TextMuted}" FontSize="14"/>

@@ -24,6 +24,8 @@ public partial class MainWindow : Window
     private readonly LanBaselineService _lan = new();
     private readonly FirmwareService _fw = new();
     private readonly MikroTikSshService _mt = new();
+    private readonly CiscoSshService _cisco = new();
+    private readonly CredentialVault _vault = new();
     private List<LanHost> _lastScan = new();
     private HostFacts? _lastFacts;
     private DiagnosisReport? _lastReport;
@@ -44,6 +46,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         LoadCatalog();
         LoadFirmwareCatalog();
+        try { _vault.Load(); } catch { }
         foreach (var p in PlaybookEngine.All)
             PlaybookBox.Items.Add(p.Title);
         if (PlaybookBox.Items.Count > 0) PlaybookBox.SelectedIndex = 0;
@@ -66,7 +69,7 @@ public partial class MainWindow : Window
                 BrandBox.SelectionChanged += (_, _) => FillModels();
                 FillModels();
             }
-            StatusText.Text = $"Catalog v{_catalog.Version} · {_catalog.Brands.Count} brands";
+            StatusText.Text = $"Catalog v{_catalog.Version} · vault entries={_vault.Entries.Count}";
         }
         catch (Exception ex) { StatusText.Text = "Catalog: " + ex.Message; }
     }
@@ -107,23 +110,88 @@ public partial class MainWindow : Window
         ContentReports.Visibility = V(tag, "Reports");
         ContentOther.Visibility = tag is "Settings" ? Visibility.Visible : Visibility.Collapsed;
         if (tag == "Settings")
-            ContentOther.Text = "Elevation required. Backups: Documents\\NetOpsToolbox\\backups · Baseline: %LocalAppData%\\NetOpsToolbox";
+            ContentOther.Text =
+                "Vault: %LocalAppData%\\NetOpsToolbox\\vault.json (DPAPI CurrentUser)\n" +
+                "Backups: Documents\\NetOpsToolbox\\backups\n" +
+                "Baseline: %LocalAppData%\\NetOpsToolbox\\lan-baseline.json";
     }
 
     private static Visibility V(string tag, string name) => tag == name ? Visibility.Visible : Visibility.Collapsed;
 
     private void AddDevice_Click(object sender, RoutedEventArgs e)
+        => DeviceList.Items.Add($"{BrandBox.SelectedItem} / {ModelBox.SelectedItem} @ {IpBox.Text.Trim()}");
+
+    private string VaultId() => IpBox.Text.Trim() + "|" + SshUserBox.Text.Trim() + "|" + SshPortBox.Text.Trim();
+
+    private void VaultSave_Click(object sender, RoutedEventArgs e)
     {
-        DeviceList.Items.Add($"{BrandBox.SelectedItem} / {ModelBox.SelectedItem} @ {(string.IsNullOrWhiteSpace(IpBox.Text) ? "0.0.0.0" : IpBox.Text.Trim())}");
+        try
+        {
+            var host = IpBox.Text.Trim();
+            var user = SshUserBox.Text.Trim();
+            var pass = SshPassBox.Password;
+            if (!int.TryParse(SshPortBox.Text.Trim(), out var port)) port = 22;
+            if (string.IsNullOrEmpty(pass))
+            {
+                DeviceSshOutput.Text = "Enter password before Save vault.";
+                return;
+            }
+            var vendor = BrandBox.SelectedItem?.ToString() ?? "";
+            _vault.Upsert(VaultId(), host, user, pass, port, vendor);
+            DeviceSshOutput.Text = $"Vault saved for {host} (DPAPI). File: {_vault.Path}";
+            _diagnosis.Executor.Audit.Record("VaultSave", "ok", host);
+            LogJob("VaultSave", "OK");
+            StatusText.Text = $"Vault entries={_vault.Entries.Count}";
+        }
+        catch (Exception ex)
+        {
+            DeviceSshOutput.Text = "Vault save failed: " + ex.Message;
+            LogJob("VaultSave", "FAIL");
+        }
+    }
+
+    private void VaultLoad_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _vault.Load();
+            var host = IpBox.Text.Trim();
+            var entry = _vault.Entries.FirstOrDefault(x => x.Host == host)
+                        ?? _vault.Entries.FirstOrDefault(x => x.Id == VaultId());
+            if (entry is null)
+            {
+                DeviceSshOutput.Text = "No vault entry for this host. Entries: " +
+                    string.Join(", ", _vault.Entries.Select(x => x.Host));
+                return;
+            }
+            SshUserBox.Text = entry.Username;
+            SshPortBox.Text = entry.Port.ToString();
+            var pass = _vault.UnprotectPassword(entry);
+            if (pass is null)
+            {
+                DeviceSshOutput.Text = "Could not decrypt password (wrong Windows user?).";
+                return;
+            }
+            SshPassBox.Password = pass;
+            DeviceSshOutput.Text = $"Loaded vault for {entry.Host} / {entry.Username} (vendor={entry.Vendor}).";
+            LogJob("VaultLoad", "OK");
+        }
+        catch (Exception ex)
+        {
+            DeviceSshOutput.Text = "Vault load failed: " + ex.Message;
+        }
+    }
+
+    private (string host, string user, string pass, int port) SshCreds()
+    {
+        if (!int.TryParse(SshPortBox.Text.Trim(), out var port)) port = 22;
+        return (IpBox.Text.Trim(), SshUserBox.Text.Trim(), SshPassBox.Password, port);
     }
 
     private async void MikrotikTest_Click(object sender, RoutedEventArgs e)
     {
-        var host = IpBox.Text.Trim();
-        var user = SshUserBox.Text.Trim();
-        var pass = SshPassBox.Password;
-        if (!int.TryParse(SshPortBox.Text.Trim(), out var port)) port = 22;
-        DeviceSshOutput.Text = "Connecting…";
+        var (host, user, pass, port) = SshCreds();
+        DeviceSshOutput.Text = "MT connecting…";
         var r = await _mt.IdentityAsync(host, user, pass, port).ConfigureAwait(true);
         DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
         _diagnosis.Executor.Audit.Record("MikroTikIdentity", r.Success ? "ok" : "fail", host);
@@ -132,23 +200,41 @@ public partial class MainWindow : Window
 
     private async void MikrotikBackup_Click(object sender, RoutedEventArgs e)
     {
-        var host = IpBox.Text.Trim();
-        var user = SshUserBox.Text.Trim();
-        var pass = SshPassBox.Password;
-        if (!int.TryParse(SshPortBox.Text.Trim(), out var port)) port = 22;
-        if (MessageBox.Show(
-                $"SSH export from {host}?\nFile goes to Documents\\NetOpsToolbox\\backups\nPassword is not saved to disk.",
-                "MikroTik export", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
-            return;
-
-        DeviceSshOutput.Text = "Exporting…";
+        var (host, user, pass, port) = SshCreds();
+        if (MessageBox.Show($"MikroTik export from {host}?", "Confirm", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
+        DeviceSshOutput.Text = "MT exporting…";
         var r = await _mt.ExportConfigAsync(host, user, pass, BackupDir, port).ConfigureAwait(true);
-        DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message +
-                               (r.LocalPath is not null ? "\nFile: " + r.LocalPath : "") +
-                               "\n\n" + (r.Preview ?? "");
+        DeviceSshOutput.Text = FormatResult(r);
         _diagnosis.Executor.Audit.Record("MikroTikExport", r.Success ? "ok" : "fail", host);
         LogJob("MT-Export", r.Success ? "OK" : "FAIL");
     }
+
+    private async void CiscoVersion_Click(object sender, RoutedEventArgs e)
+    {
+        var (host, user, pass, port) = SshCreds();
+        DeviceSshOutput.Text = "Cisco show version…";
+        var r = await _cisco.ShowVersionAsync(host, user, pass, port).ConfigureAwait(true);
+        DeviceSshOutput.Text = FormatResult(r);
+        _diagnosis.Executor.Audit.Record("CiscoVersion", r.Success ? "ok" : "fail", host);
+        LogJob("IOS-Ver", r.Success ? "OK" : "FAIL");
+    }
+
+    private async void CiscoShowRun_Click(object sender, RoutedEventArgs e)
+    {
+        var (host, user, pass, port) = SshCreds();
+        if (MessageBox.Show($"Cisco show running-config from {host}?\nSaved under Documents\\NetOpsToolbox\\backups",
+                "Confirm", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
+        DeviceSshOutput.Text = "Cisco show run…";
+        var r = await _cisco.ShowRunningConfigAsync(host, user, pass, BackupDir, port).ConfigureAwait(true);
+        DeviceSshOutput.Text = FormatResult(r);
+        _diagnosis.Executor.Audit.Record("CiscoShowRun", r.Success ? "ok" : "fail", host);
+        LogJob("IOS-Run", r.Success ? "OK" : "FAIL");
+    }
+
+    private static string FormatResult(DeviceBackupResult r)
+        => (r.Success ? "OK\n" : "FAIL\n") + r.Message +
+           (r.LocalPath is not null ? "\nFile: " + r.LocalPath : "") +
+           "\n\n" + (r.Preview ?? "");
 
     private async void RunDiagnose_Click(object sender, RoutedEventArgs e)
     {
@@ -159,52 +245,41 @@ public partial class MainWindow : Window
             _lastFacts = facts; _lastReport = report;
             var sb = new StringBuilder();
             sb.AppendLine(report.Headline);
-            sb.AppendLine();
-            sb.AppendLine("=== FACTS ===");
             sb.AppendLine($"GW: {string.Join(",", facts.DefaultGateways)} DNS: {string.Join(",", facts.DnsServers)}");
-            sb.AppendLine($"Proxy: {facts.ProxyEnabled} {facts.ProxyServer}");
-            sb.AppendLine($"GW ok={facts.Connectivity.GatewayReachable} public={facts.Connectivity.PublicDnsReachable} names={facts.Connectivity.NameResolutionWorks}");
-            sb.AppendLine();
-            sb.AppendLine("=== FLOWS ===");
+            sb.AppendLine($"Proxy: {facts.ProxyEnabled} names={facts.Connectivity.NameResolutionWorks}");
             foreach (var r in report.Results)
             {
-                sb.AppendLine($"[{r.FlowId}] {r.Title} — {r.Summary}");
+                sb.AppendLine($"[{r.FlowId}] {r.Title}");
                 foreach (var ev in r.Evidence) sb.AppendLine("  · " + ev);
             }
-            if (report.Results.Count == 0) sb.AppendLine("(none matched)");
-            sb.AppendLine();
-            sb.AppendLine("=== SOLUTIONS ===");
             foreach (var s in report.RankedSolutions)
-                sb.AppendLine($"#{s.Score} [{s.Risk}] {s.Title}: {s.Description}");
+                sb.AppendLine($"#{s.Score} [{s.Risk}] {s.Title}");
             DiagnoseOutput.Text = sb.ToString();
-            StatusText.Text = report.Headline;
             LogJob("Diagnose", "OK");
         }
         catch (Exception ex) { DiagnoseOutput.Text = ex.Message; }
         finally { DiagnoseBusy.Text = ""; }
     }
 
-    private async void ApplyFlushDns_Click(object s, RoutedEventArgs e) => await RunAction("FlushDns", "Flush DNS cache?").ConfigureAwait(true);
-    private async void ApplyRenewDhcp_Click(object s, RoutedEventArgs e) => await RunAction("RenewDhcp", "Release/renew DHCP?").ConfigureAwait(true);
+    private async void ApplyFlushDns_Click(object s, RoutedEventArgs e) => await RunAction("FlushDns", "Flush DNS?").ConfigureAwait(true);
+    private async void ApplyRenewDhcp_Click(object s, RoutedEventArgs e) => await RunAction("RenewDhcp", "Renew DHCP?").ConfigureAwait(true);
 
     private async void ApplySetDns_Click(object s, RoutedEventArgs e)
     {
         var nic = NetworkInterface.GetAllNetworkInterfaces()
             .FirstOrDefault(n => n.OperationalStatus == OperationalStatus.Up && n.GetIPProperties().GatewayAddresses.Any());
-        var name = nic?.Name ?? "";
-        _diagnosis.Executor.TargetInterfaceName = name;
-        await RunAction("SetAdapterDnsPublic",
-            string.IsNullOrEmpty(name) ? "Set public DNS?" : $"Set 1.1.1.1 on '{name}'?").ConfigureAwait(true);
+        _diagnosis.Executor.TargetInterfaceName = nic?.Name;
+        await RunAction("SetAdapterDnsPublic", $"Set DNS on '{nic?.Name}'?").ConfigureAwait(true);
     }
 
     private async Task RunAction(string id, string prompt)
     {
-        if (MessageBox.Show(prompt, id, MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
-        DiagnoseBusy.Text = id + "…";
+        if (MessageBox.Show(prompt, id, MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
+        DiagnoseBusy.Text = id;
         try
         {
             var result = await _diagnosis.ExecuteActionAsync(id).ConfigureAwait(true);
-            DiagnoseOutput.Text += $"\n\n=== {id} ===\n{(result.Success ? "SUCCESS" : "FAIL")}\n{result.Message}\nverify={result.VerifyOk} {result.VerifyDetail}";
+            DiagnoseOutput.Text += $"\n\n=== {id} ===\n{(result.Success ? "OK" : "FAIL")}\n{result.Message}";
             LogJob(id, result.Success ? "OK" : "FAIL");
         }
         catch (Exception ex) { DiagnoseOutput.Text += "\n" + ex.Message; }
@@ -214,7 +289,6 @@ public partial class MainWindow : Window
     private async void ToolPing_Click(object s, RoutedEventArgs e)
     {
         var hosts = ToolsInput.Text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        ToolsOutput.Text = "Pinging…";
         var results = await _tools.PingManyAsync(hosts).ConfigureAwait(true);
         ToolsOutput.Text = string.Join("\n", results.Select(r => $"{r.Host}: {r.Status}"));
         LogJob("Ping", "OK");
@@ -236,16 +310,12 @@ public partial class MainWindow : Window
 
     private async void ToolTrace_Click(object s, RoutedEventArgs e)
     {
-        ToolsOutput.Text = "Tracing…";
         ToolsOutput.Text = await _tools.TracerouteAsync(ToolsInput.Text.Split(',')[0]).ConfigureAwait(true);
         LogJob("Trace", "OK");
     }
 
     private void ToolSubnet_Click(object s, RoutedEventArgs e)
-    {
-        ToolsOutput.Text = NetworkTools.SubnetCalculate(ToolsInput.Text);
-        LogJob("Subnet", "OK");
-    }
+        => ToolsOutput.Text = NetworkTools.SubnetCalculate(ToolsInput.Text);
 
     private void FirmwareDiagnose_Click(object s, RoutedEventArgs e)
     {
@@ -259,12 +329,8 @@ public partial class MainWindow : Window
 
     private async void SecurityScan_Click(object s, RoutedEventArgs e)
     {
-        SecurityOutput.Text = "Scanning ARP…";
         _lastScan = await _lan.ScanAsync().ConfigureAwait(true);
-        var sb = new StringBuilder();
-        sb.AppendLine($"Hosts: {_lastScan.Count}");
-        foreach (var h in _lastScan) sb.AppendLine($"  {h.Ip,-15} {h.Mac,-20} {h.Type}");
-        SecurityOutput.Text = sb.ToString();
+        SecurityOutput.Text = string.Join("\n", _lastScan.Select(h => $"{h.Ip,-15} {h.Mac,-18} {h.Type}"));
         LogJob("LanScan", "OK");
     }
 
@@ -273,7 +339,7 @@ public partial class MainWindow : Window
         Directory.CreateDirectory(Path.GetDirectoryName(BaselinePath)!);
         if (_lastScan.Count == 0) { SecurityOutput.Text = "Scan first."; return; }
         _lan.SaveBaseline(BaselinePath, _lastScan);
-        SecurityOutput.Text += $"\nBaseline saved: {BaselinePath}";
+        SecurityOutput.Text += "\nSaved " + BaselinePath;
         LogJob("Baseline", "OK");
     }
 
@@ -281,7 +347,7 @@ public partial class MainWindow : Window
     {
         if (_lastScan.Count == 0) _lastScan = await _lan.ScanAsync().ConfigureAwait(true);
         var baseline = _lan.LoadBaseline(BaselinePath);
-        if (baseline.Count == 0) { SecurityOutput.Text = "No baseline. Scan + Save first."; return; }
+        if (baseline.Count == 0) { SecurityOutput.Text = "No baseline."; return; }
         _lastLanDiff = _lan.Diff(baseline, _lastScan);
         SecurityOutput.Text = _lastLanDiff.Summary;
         LogJob("LanDiff", _lastLanDiff.NewHosts.Count > 0 ? "NEW" : "OK");
@@ -290,15 +356,14 @@ public partial class MainWindow : Window
     private void PlaybookShow_Click(object s, RoutedEventArgs e)
     {
         var p = PlaybookEngine.All.ElementAtOrDefault(PlaybookBox.SelectedIndex);
-        PlaybookOutput.Text = p is null ? "Select a playbook." : PlaybookEngine.Render(p);
+        PlaybookOutput.Text = p is null ? "—" : PlaybookEngine.Render(p);
     }
 
     private async void ReportGenerate_Click(object s, RoutedEventArgs e)
     {
         if (_lastFacts is null || _lastReport is null)
         {
-            try { var t = await _diagnosis.RunAsync().ConfigureAwait(true); _lastFacts = t.Facts; _lastReport = t.Report; }
-            catch { }
+            try { var t = await _diagnosis.RunAsync().ConfigureAwait(true); _lastFacts = t.Facts; _lastReport = t.Report; } catch { }
         }
         var audit = _diagnosis.Executor.Audit.Snapshot();
         _lastReportText = ReportExporter.BuildText(_lastFacts, _lastReport, _lastLanDiff, audit);
@@ -313,20 +378,17 @@ public partial class MainWindow : Window
         var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
             $"NetOps-Report-{DateTime.Now:yyyyMMdd-HHmmss}.txt");
         ReportExporter.WriteAll(path, _lastReportText);
-        ReportOutput.Text += "\n\nSaved TXT: " + path;
+        ReportOutput.Text += "\nSaved " + path;
         LogJob("ReportTXT", "OK");
     }
 
     private void ReportSaveCsv_Click(object s, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(_lastReportCsv))
-        {
-            ReportGenerate_Click(s, e);
-        }
+        if (string.IsNullOrWhiteSpace(_lastReportCsv)) ReportGenerate_Click(s, e);
         var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
             $"NetOps-Report-{DateTime.Now:yyyyMMdd-HHmmss}.csv");
         ReportExporter.WriteAll(path, _lastReportCsv);
-        ReportOutput.Text += "\n\nSaved CSV: " + path;
+        ReportOutput.Text += "\nSaved " + path;
         LogJob("ReportCSV", "OK");
     }
 
