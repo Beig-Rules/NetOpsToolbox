@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using NetOps.Core;
 using NetOps.Core.Diagnosis;
+using NetOps.Core.Devices;
 using NetOps.Core.Facts;
 using NetOps.Core.Firmware;
 using NetOps.Core.Models;
@@ -22,15 +23,21 @@ public partial class MainWindow : Window
     private readonly NetworkTools _tools = new();
     private readonly LanBaselineService _lan = new();
     private readonly FirmwareService _fw = new();
+    private readonly MikroTikSshService _mt = new();
     private List<LanHost> _lastScan = new();
     private HostFacts? _lastFacts;
     private DiagnosisReport? _lastReport;
     private LanDiffResult? _lastLanDiff;
     private string _lastReportText = "";
+    private string _lastReportCsv = "";
 
     private string BaselinePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "NetOpsToolbox", "lan-baseline.json");
+
+    private string BackupDir => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        "NetOpsToolbox", "backups");
 
     public MainWindow()
     {
@@ -73,7 +80,7 @@ public partial class MainWindow : Window
                 path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "data", "firmware", "catalog.v1.json"));
             if (File.Exists(path)) _fw.Load(path);
         }
-        catch { /* optional */ }
+        catch { }
     }
 
     private void FillModels()
@@ -100,7 +107,7 @@ public partial class MainWindow : Window
         ContentReports.Visibility = V(tag, "Reports");
         ContentOther.Visibility = tag is "Settings" ? Visibility.Visible : Visibility.Collapsed;
         if (tag == "Settings")
-            ContentOther.Text = "Elevation required (manifest). Theme: Minimal Mono. Data under %LocalAppData%\\NetOpsToolbox";
+            ContentOther.Text = "Elevation required. Backups: Documents\\NetOpsToolbox\\backups · Baseline: %LocalAppData%\\NetOpsToolbox";
     }
 
     private static Visibility V(string tag, string name) => tag == name ? Visibility.Visible : Visibility.Collapsed;
@@ -108,6 +115,39 @@ public partial class MainWindow : Window
     private void AddDevice_Click(object sender, RoutedEventArgs e)
     {
         DeviceList.Items.Add($"{BrandBox.SelectedItem} / {ModelBox.SelectedItem} @ {(string.IsNullOrWhiteSpace(IpBox.Text) ? "0.0.0.0" : IpBox.Text.Trim())}");
+    }
+
+    private async void MikrotikTest_Click(object sender, RoutedEventArgs e)
+    {
+        var host = IpBox.Text.Trim();
+        var user = SshUserBox.Text.Trim();
+        var pass = SshPassBox.Password;
+        if (!int.TryParse(SshPortBox.Text.Trim(), out var port)) port = 22;
+        DeviceSshOutput.Text = "Connecting…";
+        var r = await _mt.IdentityAsync(host, user, pass, port).ConfigureAwait(true);
+        DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
+        _diagnosis.Executor.Audit.Record("MikroTikIdentity", r.Success ? "ok" : "fail", host);
+        LogJob("MT-Test", r.Success ? "OK" : "FAIL");
+    }
+
+    private async void MikrotikBackup_Click(object sender, RoutedEventArgs e)
+    {
+        var host = IpBox.Text.Trim();
+        var user = SshUserBox.Text.Trim();
+        var pass = SshPassBox.Password;
+        if (!int.TryParse(SshPortBox.Text.Trim(), out var port)) port = 22;
+        if (MessageBox.Show(
+                $"SSH export from {host}?\nFile goes to Documents\\NetOpsToolbox\\backups\nPassword is not saved to disk.",
+                "MikroTik export", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
+            return;
+
+        DeviceSshOutput.Text = "Exporting…";
+        var r = await _mt.ExportConfigAsync(host, user, pass, BackupDir, port).ConfigureAwait(true);
+        DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message +
+                               (r.LocalPath is not null ? "\nFile: " + r.LocalPath : "") +
+                               "\n\n" + (r.Preview ?? "");
+        _diagnosis.Executor.Audit.Record("MikroTikExport", r.Success ? "ok" : "fail", host);
+        LogJob("MT-Export", r.Success ? "OK" : "FAIL");
     }
 
     private async void RunDiagnose_Click(object sender, RoutedEventArgs e)
@@ -145,18 +185,16 @@ public partial class MainWindow : Window
     }
 
     private async void ApplyFlushDns_Click(object s, RoutedEventArgs e) => await RunAction("FlushDns", "Flush DNS cache?").ConfigureAwait(true);
-    private async void ApplyRenewDhcp_Click(object s, RoutedEventArgs e) => await RunAction("RenewDhcp", "Release/renew DHCP? May drop briefly.").ConfigureAwait(true);
+    private async void ApplyRenewDhcp_Click(object s, RoutedEventArgs e) => await RunAction("RenewDhcp", "Release/renew DHCP?").ConfigureAwait(true);
 
     private async void ApplySetDns_Click(object s, RoutedEventArgs e)
     {
         var nic = NetworkInterface.GetAllNetworkInterfaces()
             .FirstOrDefault(n => n.OperationalStatus == OperationalStatus.Up && n.GetIPProperties().GatewayAddresses.Any());
         var name = nic?.Name ?? "";
-        var msg = string.IsNullOrEmpty(name)
-            ? "Set DNS 1.1.1.1 / 1.0.0.1 on primary interface?"
-            : $"Set DNS 1.1.1.1 / 1.0.0.1 on interface '{name}'?\nRollback: netsh ... dhcp";
         _diagnosis.Executor.TargetInterfaceName = name;
-        await RunAction("SetAdapterDnsPublic", msg).ConfigureAwait(true);
+        await RunAction("SetAdapterDnsPublic",
+            string.IsNullOrEmpty(name) ? "Set public DNS?" : $"Set 1.1.1.1 on '{name}'?").ConfigureAwait(true);
     }
 
     private async Task RunAction(string id, string prompt)
@@ -260,9 +298,11 @@ public partial class MainWindow : Window
         if (_lastFacts is null || _lastReport is null)
         {
             try { var t = await _diagnosis.RunAsync().ConfigureAwait(true); _lastFacts = t.Facts; _lastReport = t.Report; }
-            catch { /* ignore */ }
+            catch { }
         }
-        _lastReportText = ReportExporter.BuildText(_lastFacts, _lastReport, _lastLanDiff, _diagnosis.Executor.Audit.Snapshot());
+        var audit = _diagnosis.Executor.Audit.Snapshot();
+        _lastReportText = ReportExporter.BuildText(_lastFacts, _lastReport, _lastLanDiff, audit);
+        _lastReportCsv = ReportExporter.BuildCsv(_lastFacts, _lastReport, _lastLanDiff, audit);
         ReportOutput.Text = _lastReportText;
         LogJob("Report", "OK");
     }
@@ -273,8 +313,21 @@ public partial class MainWindow : Window
         var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
             $"NetOps-Report-{DateTime.Now:yyyyMMdd-HHmmss}.txt");
         ReportExporter.WriteAll(path, _lastReportText);
-        ReportOutput.Text += "\n\nSaved: " + path;
-        LogJob("ReportSave", "OK");
+        ReportOutput.Text += "\n\nSaved TXT: " + path;
+        LogJob("ReportTXT", "OK");
+    }
+
+    private void ReportSaveCsv_Click(object s, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_lastReportCsv))
+        {
+            ReportGenerate_Click(s, e);
+        }
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            $"NetOps-Report-{DateTime.Now:yyyyMMdd-HHmmss}.csv");
+        ReportExporter.WriteAll(path, _lastReportCsv);
+        ReportOutput.Text += "\n\nSaved CSV: " + path;
+        LogJob("ReportCSV", "OK");
     }
 
     private void LogJob(string name, string result)

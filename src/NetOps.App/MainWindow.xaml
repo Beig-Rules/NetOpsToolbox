@@ -1,7 +1,7 @@
 <Window x:Class="NetOps.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="NetOps Toolbox" Height="740" Width="1100" MinHeight="500" MinWidth="820"
+        Title="NetOps Toolbox" Height="760" Width="1120" MinHeight="500" MinWidth="820"
         Background="{StaticResource BgCanvas}" FontFamily="Segoe UI" WindowStartupLocation="CenterScreen">
   <Window.Resources>
     <Style x:Key="NavButton" TargetType="Button">
@@ -52,15 +52,29 @@
         <TextBlock x:Name="JobsText" Text="—" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource TextPrimary}"/>
       </StackPanel>
 
-      <StackPanel x:Name="ContentDevices" Visibility="Collapsed">
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-          <ComboBox x:Name="BrandBox" Width="150" Margin="0,0,8,0"/>
-          <ComboBox x:Name="ModelBox" Width="180" Margin="0,0,8,0"/>
-          <TextBox x:Name="IpBox" Width="120" Margin="0,0,8,0" FontFamily="Consolas"/>
-          <Button Content="Add device" Padding="10,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="AddDevice_Click"/>
+      <DockPanel x:Name="ContentDevices" Visibility="Collapsed">
+        <StackPanel DockPanel.Dock="Top">
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+            <ComboBox x:Name="BrandBox" Width="140" Margin="0,0,8,0"/>
+            <ComboBox x:Name="ModelBox" Width="160" Margin="0,0,8,0"/>
+            <TextBox x:Name="IpBox" Width="120" Margin="0,0,8,0" FontFamily="Consolas" Text="192.168.88.1"/>
+            <Button Content="Add device" Padding="10,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="AddDevice_Click"/>
+          </StackPanel>
+          <TextBlock Text="MikroTik SSH (password not stored)" FontSize="11" Foreground="{StaticResource TextMuted}" Margin="0,0,0,6"/>
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBox x:Name="SshUserBox" Width="100" Margin="0,0,8,0" Text="admin"/>
+            <PasswordBox x:Name="SshPassBox" Width="120" Margin="0,0,8,0"/>
+            <TextBox x:Name="SshPortBox" Width="50" Margin="0,0,8,0" FontFamily="Consolas" Text="22"/>
+            <Button Content="Test SSH" Padding="10,6" Margin="0,0,8,0" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="MikrotikTest_Click"/>
+            <Button Content="Export backup" Padding="10,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="MikrotikBackup_Click"/>
+          </StackPanel>
+          <ListBox x:Name="DeviceList" Height="100" BorderBrush="{StaticResource Stroke}" FontFamily="Consolas" FontSize="12" Margin="0,0,0,10"/>
         </StackPanel>
-        <ListBox x:Name="DeviceList" BorderBrush="{StaticResource Stroke}" FontFamily="Consolas" FontSize="12"/>
-      </StackPanel>
+        <ScrollViewer>
+          <TextBlock x:Name="DeviceSshOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}"
+                     Text="Select MikroTik brand, set IP, enter SSH user/password, then Test or Export."/>
+        </ScrollViewer>
+      </DockPanel>
 
       <DockPanel x:Name="ContentDiagnose" Visibility="Collapsed">
         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,12">
@@ -116,10 +130,13 @@
 
       <DockPanel x:Name="ContentReports" Visibility="Collapsed">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-          <Button Content="Generate report" Padding="12,7" Margin="0,0,0,8" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" HorizontalAlignment="Left" Click="ReportGenerate_Click"/>
-          <Button Content="Save report to Desktop" Padding="12,7" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" HorizontalAlignment="Left" Click="ReportSave_Click"/>
+          <WrapPanel>
+            <Button Content="Generate report" Padding="12,7" Margin="0,0,8,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="ReportGenerate_Click"/>
+            <Button Content="Save TXT" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ReportSave_Click"/>
+            <Button Content="Save CSV" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ReportSaveCsv_Click"/>
+          </WrapPanel>
         </StackPanel>
-        <ScrollViewer><TextBlock x:Name="ReportOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Generate combines last diagnosis, LAN, audit."/></ScrollViewer>
+        <ScrollViewer><TextBlock x:Name="ReportOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Generate combines diagnosis, LAN, audit."/></ScrollViewer>
       </DockPanel>
 
       <TextBlock x:Name="ContentOther" Visibility="Collapsed" TextWrapping="Wrap" Foreground="{StaticResource TextMuted}" FontSize="14"/>
