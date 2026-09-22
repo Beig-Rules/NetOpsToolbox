@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon />
+    <RootNamespace>NetOps.App</RootNamespace>
+    <AssemblyName>NetOpsToolbox</AssemblyName>
+    <Product>NetOps Toolbox</Product>
+    <Company>Beig-Rules</Company>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NetOps.Core\NetOps.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\data\brands\catalog.v1.json" Link="catalog.v1.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

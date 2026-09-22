@@ -8,38 +8,38 @@ Native Windows network specialist workbench with **Minimal Mono** UI signature (
 ## UI
 English only. Black/white minimal shell.
 
-## Preview (open this first)
+## Preview
 
 | Source | URL |
 |--------|-----|
+| **GitHub Pages** | https://beig-rules.github.io/NetOpsToolbox/ |
 | **Repo file** | [index.html](./index.html) |
-| **jsDelivr** | https://cdn.jsdelivr.net/gh/Beig-Rules/NetOpsToolbox@main/index.html |
-| **GitHub Pages** | https://beig-rules.github.io/NetOpsToolbox/ *(after enabling Pages → GitHub Actions once)* |
 
-Also: `prototype/index.html` (same shell).
+## Native Windows (Phase 1)
+
+| Project | Role |
+|---------|------|
+| `src/NetOps.Core` | Brand catalog + shared models |
+| `src/NetOps.App` | WPF shell, `requireAdministrator`, Minimal Mono |
+
+```bat
+dotnet build NetOpsToolbox.sln -c Release
+dotnet run --project src/NetOps.App
+```
+
+CI builds on **windows-latest** and uploads **NetOpsToolbox-win-x64** artifact. See `docs/NATIVE.md`.
 
 ## Data
-`data/brands/catalog.v1.json` — brand/model registry (day one): Huawei, TP-Link, D-Link, ASUS, MikroTik, Cisco, and more.
-
-## Docs
-- `docs/DESIGN_SYSTEM.md` (add when present)
-- `docs/SCREENS.md`
-- `docs/PHASE0.md`
-- `PACKAGES.md`
+`data/brands/catalog.v1.json` — Huawei, TP-Link, D-Link, ASUS, MikroTik, Cisco, …
 
 ## GitHub Actions
 
 | Workflow | Purpose |
 |----------|---------|
-| **CI** | Validate catalog JSON + required files + HTML markers |
-| **Deploy Preview to GitHub Pages** | Host Minimal Mono shell |
-| **Publish GitHub Packages** | npm `@beig-rules/netops-toolbox` |
-| **Dependabot** | Weekly Actions + monthly npm updates |
-
-### Enable Pages (one time)
-1. Open **Settings → Pages**
-2. Source: **GitHub Actions** (or Deploy from branch `main` / root)
-3. Re-run **Deploy Preview to GitHub Pages** workflow if needed
+| **CI** | Catalog validate (Ubuntu) + **Native WPF build** (Windows) |
+| **Pages** | Web prototype host |
+| **Packages** | npm `@beig-rules/netops-toolbox` |
+| **Dependabot** | Actions + npm |
 
 ## Status
-Phase 0 — design lock + catalog + UI prototype + CI/Pages/packages. Native WinUI solution next.
+Phase 1 — web preview live + native WPF shell + CI artifact. WinUI 3 host and device drivers next.
