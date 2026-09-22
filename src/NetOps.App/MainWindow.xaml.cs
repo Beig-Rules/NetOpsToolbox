@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using NetOps.Core;
@@ -9,6 +10,7 @@ namespace NetOps.App;
 public partial class MainWindow : Window
 {
     private BrandCatalog? _catalog;
+    private readonly DiagnosisService _diagnosis = new();
 
     public MainWindow()
     {
@@ -71,7 +73,10 @@ public partial class MainWindow : Window
 
         ContentDashboard.Visibility = tag == "Dashboard" ? Visibility.Visible : Visibility.Collapsed;
         ContentDevices.Visibility = tag == "Devices" ? Visibility.Visible : Visibility.Collapsed;
-        ContentOther.Visibility = tag is "Dashboard" or "Devices" ? Visibility.Collapsed : Visibility.Visible;
+        ContentDiagnose.Visibility = tag == "Diagnose" ? Visibility.Visible : Visibility.Collapsed;
+        ContentOther.Visibility = tag is "Dashboard" or "Devices" or "Diagnose"
+            ? Visibility.Collapsed
+            : Visibility.Visible;
 
         ContentOther.Text = tag switch
         {
@@ -91,5 +96,67 @@ public partial class MainWindow : Window
         var model = ModelBox.SelectedItem?.ToString() ?? "?";
         var ip = string.IsNullOrWhiteSpace(IpBox.Text) ? "0.0.0.0" : IpBox.Text.Trim();
         DeviceList.Items.Add($"{brand} / {model} @ {ip}");
+    }
+
+    private async void RunDiagnose_Click(object sender, RoutedEventArgs e)
+    {
+        RunDiagnoseBtn.IsEnabled = false;
+        DiagnoseBusy.Text = "Collecting facts…";
+        DiagnoseOutput.Text = "";
+        try
+        {
+            var (facts, report) = await _diagnosis.RunAsync().ConfigureAwait(true);
+            var sb = new StringBuilder();
+            sb.AppendLine(report.Headline);
+            sb.AppendLine();
+            sb.AppendLine("=== FACTS ===");
+            sb.AppendLine($"Adapters: {facts.Adapters.Count} | Gateways: {string.Join(", ", facts.DefaultGateways)}");
+            sb.AppendLine($"DNS: {string.Join(", ", facts.DnsServers)}");
+            sb.AppendLine($"Proxy: {(facts.ProxyEnabled ? facts.ProxyServer ?? "on" : "off")}");
+            sb.AppendLine($"Gateway reachable: {facts.Connectivity.GatewayReachable} RTT={facts.Connectivity.GatewayRttMs}ms");
+            sb.AppendLine($"Public probe: {facts.Connectivity.PublicDnsReachable} | DNS name: {facts.Connectivity.NameResolutionWorks}");
+            if (facts.Connectivity.ResolvedProbe is not null)
+                sb.AppendLine($"Resolved: {facts.Connectivity.ResolvedProbe}");
+            foreach (var n in facts.CollectorNotes)
+                sb.AppendLine("note: " + n);
+
+            sb.AppendLine();
+            sb.AppendLine("=== MATCHED FLOWS ===");
+            if (report.Results.Count == 0)
+                sb.AppendLine("(none)");
+            foreach (var r in report.Results)
+            {
+                sb.AppendLine($"[{r.FlowId}] {r.Title}");
+                sb.AppendLine("  " + r.Summary);
+                foreach (var ev in r.Evidence)
+                    sb.AppendLine("  · " + ev);
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("=== RANKED SOLUTIONS ===");
+            if (report.RankedSolutions.Count == 0)
+                sb.AppendLine("(none — network looks consistent with probes)");
+            foreach (var s in report.RankedSolutions)
+            {
+                sb.AppendLine($"#{s.Score} [{s.Risk}] {s.Title}");
+                sb.AppendLine("  " + s.Description);
+                sb.AppendLine("  actions: " + string.Join(", ", s.ActionIds));
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("Mutating execute is not enabled in this build (advisory pipeline only).");
+            DiagnoseOutput.Text = sb.ToString();
+            StatusText.Text = "Diagnosis complete · " + report.Headline;
+        }
+        catch (Exception ex)
+        {
+            DiagnoseOutput.Text = "Diagnosis failed: " + ex.Message;
+            StatusText.Text = "Diagnosis error";
+        }
+        finally
+        {
+            DiagnoseBusy.Text = "";
+            RunDiagnoseBtn.IsEnabled = true;
+        }
     }
 }

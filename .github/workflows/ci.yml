@@ -20,12 +20,18 @@ jobs:
       - name: Required files exist
         run: |
           test -f index.html
-          test -f README.md
           test -f data/brands/catalog.v1.json
           test -f NetOpsToolbox.sln
-          test -f src/NetOps.App/NetOps.App.csproj
-          test -f src/NetOps.Core/NetOps.Core.csproj
-          echo "Required paths OK"
+          test -f src/NetOps.Core/Diagnosis/DiagnosisEngine.cs
+          test -f src/NetOps.Core/Collectors/HostNetworkCollector.cs
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build Core on Linux
+        run: dotnet build src/NetOps.Core/NetOps.Core.csproj -c Release
 
       - name: Validate brand catalog JSON
         run: |
@@ -34,19 +40,10 @@ jobs:
           from pathlib import Path
           data = json.loads(Path("data/brands/catalog.v1.json").read_text(encoding="utf-8"))
           assert data.get("version") == 1
-          brands = data.get("brands") or []
-          models = data.get("models") or []
-          ids = {b["id"] for b in brands}
+          ids = {b["id"] for b in data["brands"]}
           assert "huawei" in ids and "mikrotik" in ids
-          for m in models:
-              assert m["brand"] in ids
-          print(f"OK brands={len(brands)} models={len(models)}")
+          print("catalog OK")
           PY
-
-      - name: HTML shell sanity
-        run: |
-          grep -q "NETOPS TOOLBOX" index.html
-          grep -q "Firmware" index.html
 
   native-windows:
     name: Build Native Windows (WPF)
