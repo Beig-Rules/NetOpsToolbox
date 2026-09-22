@@ -1,7 +1,7 @@
 <Window x:Class="NetOps.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="NetOps Toolbox" Height="800" Width="1160" MinHeight="540" MinWidth="880"
+        Title="NetOps Toolbox" Height="820" Width="1180" MinHeight="560" MinWidth="900"
         Background="{StaticResource BgCanvas}" FontFamily="Segoe UI" WindowStartupLocation="CenterScreen">
   <Window.Resources>
     <Style x:Key="NavButton" TargetType="Button">
@@ -37,6 +37,7 @@
       <StackPanel>
         <Button Content="Dashboard" Style="{StaticResource NavButton}" Tag="Dashboard" Click="Nav_Click"/>
         <Button Content="Devices" Style="{StaticResource NavButton}" Tag="Devices" Click="Nav_Click"/>
+        <Button Content="Jobs" Style="{StaticResource NavButton}" Tag="Jobs" Click="Nav_Click"/>
         <Button Content="Diagnose" Style="{StaticResource NavButton}" Tag="Diagnose" Click="Nav_Click"/>
         <Button Content="Tools" Style="{StaticResource NavButton}" Tag="Tools" Click="Nav_Click"/>
         <Button Content="Firmware" Style="{StaticResource NavButton}" Tag="Firmware" Click="Nav_Click"/>
@@ -63,28 +64,43 @@
           <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
             <TextBox x:Name="SshUserBox" Width="80" Margin="0,0,6,0" Text="admin"/>
             <PasswordBox x:Name="SshPassBox" Width="100" Margin="0,0,6,0" ToolTip="Login password"/>
-            <PasswordBox x:Name="EnablePassBox" Width="100" Margin="0,0,6,0" ToolTip="Cisco enable password (optional)"/>
+            <PasswordBox x:Name="EnablePassBox" Width="100" Margin="0,0,6,0" ToolTip="Cisco enable (optional)"/>
             <TextBox x:Name="SshPortBox" Width="40" Margin="0,0,6,0" FontFamily="Consolas" Text="22"/>
             <Button Content="Save vault" Padding="8,5" Margin="0,0,4,0" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="VaultSave_Click"/>
             <Button Content="Load" Padding="8,5" Margin="0,0,4,0" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="VaultLoad_Click"/>
             <Button Content="Delete" Padding="8,5" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="VaultDelete_Click"/>
           </StackPanel>
-          <TextBlock Text="Login | Enable (Cisco) | Port — vault uses DPAPI" FontSize="10" Foreground="{StaticResource TextMuted}" Margin="0,0,0,4"/>
           <WrapPanel Margin="0,0,0,6">
             <Button Content="MT Test" Padding="8,5" Margin="0,0,4,4" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="MikrotikTest_Click"/>
             <Button Content="MT Export" Padding="8,5" Margin="0,0,4,4" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="MikrotikBackup_Click"/>
-            <Button Content="Cisco Version" Padding="8,5" Margin="0,0,4,4" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="CiscoVersion_Click"/>
-            <Button Content="Cisco show run" Padding="8,5" Margin="0,0,4,4" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="CiscoShowRun_Click"/>
-            <Button Content="Refresh vault list" Padding="8,5" Margin="0,0,4,4" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="VaultRefresh_Click"/>
+            <Button Content="Cisco Ver" Padding="8,5" Margin="0,0,4,4" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="CiscoVersion_Click"/>
+            <Button Content="Cisco Run" Padding="8,5" Margin="0,0,4,4" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="CiscoShowRun_Click"/>
+            <Button Content="UBNT ID" Padding="8,5" Margin="0,0,4,4" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="UbntId_Click"/>
+            <Button Content="UBNT Export" Padding="8,5" Margin="0,0,4,4" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="UbntExport_Click"/>
+            <Button Content="Refresh vault" Padding="8,5" Margin="0,0,4,4" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="VaultRefresh_Click"/>
           </WrapPanel>
           <TextBlock Text="VAULT" FontSize="10" Foreground="{StaticResource TextMuted}" Margin="0,0,0,2"/>
-          <ListBox x:Name="VaultList" Height="88" BorderBrush="{StaticResource Stroke}" FontFamily="Consolas" FontSize="11" Margin="0,0,0,6"
-                   MouseDoubleClick="VaultList_DoubleClick"/>
-          <ListBox x:Name="DeviceList" Height="56" BorderBrush="{StaticResource Stroke}" FontFamily="Consolas" FontSize="11" Margin="0,0,0,6"/>
+          <ListBox x:Name="VaultList" Height="80" BorderBrush="{StaticResource Stroke}" FontFamily="Consolas" FontSize="11" Margin="0,0,0,6" MouseDoubleClick="VaultList_DoubleClick"/>
+          <ListBox x:Name="DeviceList" Height="48" BorderBrush="{StaticResource Stroke}" FontFamily="Consolas" FontSize="11" Margin="0,0,0,6"/>
         </StackPanel>
         <ScrollViewer>
           <TextBlock x:Name="DeviceSshOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}"
-                     Text="Double-click vault row to load. Enable password used only for Cisco."/>
+                     Text="MT / Cisco / Ubiquiti SSH. Queue multi-device backups from Jobs tab."/>
+        </ScrollViewer>
+      </DockPanel>
+
+      <DockPanel x:Name="ContentJobs" Visibility="Collapsed">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+          <TextBlock Text="Queue backups for all vault entries (or selected). Max concurrency = 2." FontSize="12" Foreground="{StaticResource TextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+          <WrapPanel>
+            <Button Content="Queue: MT Export all" Padding="10,6" Margin="0,0,6,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="QueueMtAll_Click"/>
+            <Button Content="Queue: Cisco Run all" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="QueueCiscoAll_Click"/>
+            <Button Content="Queue: UBNT Export all" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="QueueUbntAll_Click"/>
+            <Button Content="Refresh jobs" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="JobsRefresh_Click"/>
+          </WrapPanel>
+        </StackPanel>
+        <ScrollViewer>
+          <TextBlock x:Name="JobsPanelText" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="No jobs yet."/>
         </ScrollViewer>
       </DockPanel>
 
