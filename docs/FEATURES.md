@@ -10,18 +10,22 @@
 | Playbooks | 3 templates |
 | Reports | TXT + CSV |
 | MikroTik | SSH identity + export |
-| Cisco | show version / show run + **enable password** |
-| Vault | DPAPI login + enable, **list / double-click load / delete** |
+| Cisco | show version / run + enable |
+| **Ubiquiti** | EdgeOS `show configuration commands` + UniFi fallbacks |
+| Vault | DPAPI list / load / delete |
+| **Jobs** | Multi-device queue, concurrency 2 |
 
-## Cisco enable
+## Ubiquiti
 
-1. Enter login password in first PasswordBox
-2. Enter enable secret in second PasswordBox (optional)
-3. Save vault stores both (DPAPI)
-4. show run sends `enable` then password when prompt detected
+- Identity: `show version` then Linux fallbacks
+- Export: `show configuration commands` → `/config/config.boot` → UniFi JSON head
+- Files: `Documents\\NetOpsToolbox\\backups\\ubnt-*.txt`
 
-## Vault UI
+## Job queue
 
-- List shows `host:port user [vendor] +enable`
-- Double-click or Load applies credentials to fields
-- Delete removes selected entry
+1. Save devices to vault (correct Vendor brand)
+2. Open **Jobs**
+3. Queue MT / Cisco / UBNT for matching vault entries
+4. Watch status panel; backups land in Documents folder
+
+Passwords cleared from job objects after run.

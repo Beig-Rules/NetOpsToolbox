@@ -9,6 +9,7 @@ using NetOps.Core.Diagnosis;
 using NetOps.Core.Devices;
 using NetOps.Core.Facts;
 using NetOps.Core.Firmware;
+using NetOps.Core.Jobs;
 using NetOps.Core.Models;
 using NetOps.Core.Playbooks;
 using NetOps.Core.Reports;
@@ -26,7 +27,9 @@ public partial class MainWindow : Window
     private readonly FirmwareService _fw = new();
     private readonly MikroTikSshService _mt = new();
     private readonly CiscoSshService _cisco = new();
+    private readonly UbiquitiSshService _ubnt = new();
     private readonly CredentialVault _vault = new();
+    private readonly JobQueue _jobs = new();
     private List<LanHost> _lastScan = new();
     private HostFacts? _lastFacts;
     private DiagnosisReport? _lastReport;
@@ -45,6 +48,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _jobs.BackupDirectory = BackupDir;
+        _jobs.MaxConcurrency = 2;
+        _jobs.Changed += () => Dispatcher.Invoke(RefreshJobsPanel);
         LoadCatalog();
         LoadFirmwareCatalog();
         try { _vault.Load(); RefreshVaultList(); } catch { }
@@ -103,6 +109,7 @@ public partial class MainWindow : Window
         if (sender is not Button btn || btn.Tag is not string tag) return;
         ContentDashboard.Visibility = V(tag, "Dashboard");
         ContentDevices.Visibility = V(tag, "Devices");
+        ContentJobs.Visibility = V(tag, "Jobs");
         ContentDiagnose.Visibility = V(tag, "Diagnose");
         ContentTools.Visibility = V(tag, "Tools");
         ContentFirmware.Visibility = V(tag, "Firmware");
@@ -112,10 +119,12 @@ public partial class MainWindow : Window
         ContentOther.Visibility = tag is "Settings" ? Visibility.Visible : Visibility.Collapsed;
         if (tag == "Settings")
             ContentOther.Text =
-                "Vault DPAPI: " + _vault.Path + "\n" +
-                "Backups: Documents\\NetOpsToolbox\\backups\n" +
-                "Enable password is for Cisco privileged EXEC only.";
+                "Vault: " + _vault.Path + "\n" +
+                "Backups: " + BackupDir + "\n" +
+                "Job concurrency: " + _jobs.MaxConcurrency + "\n" +
+                "Vendors SSH: MikroTik, Cisco, Ubiquiti (EdgeOS/UniFi).";
         if (tag == "Devices") RefreshVaultList();
+        if (tag == "Jobs") RefreshJobsPanel();
     }
 
     private static Visibility V(string tag, string name) => tag == name ? Visibility.Visible : Visibility.Collapsed;
@@ -131,6 +140,20 @@ public partial class MainWindow : Window
         foreach (var e in _vault.Entries)
             VaultList.Items.Add(new VaultListItem(e, _vault.DisplayLine(e)));
         StatusText.Text = $"Vault entries={_vault.Entries.Count}";
+    }
+
+    private void RefreshJobsPanel()
+    {
+        var sb = new StringBuilder();
+        foreach (var j in _jobs.Snapshot().Take(40))
+        {
+            sb.AppendLine($"{j.CreatedAt:HH:mm:ss}  {j.Status,-10}  {j.Kind,-16}  {j.Host}  {j.Message}");
+            if (!string.IsNullOrEmpty(j.LocalPath))
+                sb.AppendLine("         → " + j.LocalPath);
+        }
+        JobsPanelText.Text = sb.Length == 0 ? "No jobs yet." : sb.ToString();
+        var last = _jobs.Snapshot().Take(8);
+        JobsText.Text = string.Join("\n", last.Select(j => $"{j.CreatedAt:HH:mm}  {j.Kind.ToString().PadRight(14)} {j.Status}"));
     }
 
     private void VaultRefresh_Click(object s, RoutedEventArgs e)
@@ -150,17 +173,14 @@ public partial class MainWindow : Window
             if (!int.TryParse(SshPortBox.Text.Trim(), out var port)) port = 22;
             if (string.IsNullOrEmpty(pass))
             {
-                DeviceSshOutput.Text = "Login password required to save vault.";
+                DeviceSshOutput.Text = "Login password required.";
                 return;
             }
             var vendor = BrandBox.SelectedItem?.ToString() ?? "";
             _vault.Upsert(VaultId(), host, user, pass, port, vendor,
                 string.IsNullOrEmpty(enable) ? null : enable);
             RefreshVaultList();
-            DeviceSshOutput.Text = $"Vault saved: {host}" +
-                (string.IsNullOrEmpty(enable) ? "" : " (+enable)") +
-                "\n" + _vault.Path;
-            _diagnosis.Executor.Audit.Record("VaultSave", "ok", host);
+            DeviceSshOutput.Text = $"Vault saved: {host}" + (string.IsNullOrEmpty(enable) ? "" : " (+enable)");
             LogJob("VaultSave", "OK");
         }
         catch (Exception ex)
@@ -212,14 +232,13 @@ public partial class MainWindow : Window
         var enable = _vault.UnprotectEnablePassword(entry);
         if (pass is null)
         {
-            DeviceSshOutput.Text = "Decrypt login password failed (wrong Windows user?).";
+            DeviceSshOutput.Text = "Decrypt failed (wrong Windows user?).";
             return;
         }
         SshPassBox.Password = pass;
         EnablePassBox.Password = enable ?? "";
         DeviceSshOutput.Text = $"Loaded {entry.Host} / {entry.Username}" +
-            (enable is not null ? " (+enable)" : "") +
-            $"  [{entry.Vendor}]";
+            (enable is not null ? " (+enable)" : "") + $"  [{entry.Vendor}]";
         LogJob("VaultLoad", "OK");
     }
 
@@ -227,11 +246,10 @@ public partial class MainWindow : Window
     {
         if (VaultList.SelectedItem is not VaultListItem item)
         {
-            DeviceSshOutput.Text = "Select a vault row to delete.";
+            DeviceSshOutput.Text = "Select a vault row.";
             return;
         }
-        if (MessageBox.Show("Delete vault entry for " + item.Entry.Host + "?",
-                "Delete", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
+        if (MessageBox.Show("Delete " + item.Entry.Host + "?", "Delete", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
         _vault.Remove(item.Entry.Id);
         RefreshVaultList();
         DeviceSshOutput.Text = "Deleted " + item.Entry.Host;
@@ -249,45 +267,95 @@ public partial class MainWindow : Window
     private async void MikrotikTest_Click(object sender, RoutedEventArgs e)
     {
         var (host, user, pass, port, _) = SshCreds();
-        DeviceSshOutput.Text = "MT connecting…";
+        DeviceSshOutput.Text = "MT…";
         var r = await _mt.IdentityAsync(host, user, pass, port).ConfigureAwait(true);
         DeviceSshOutput.Text = FormatResult(r);
-        _diagnosis.Executor.Audit.Record("MikroTikIdentity", r.Success ? "ok" : "fail", host);
         LogJob("MT-Test", r.Success ? "OK" : "FAIL");
     }
 
     private async void MikrotikBackup_Click(object sender, RoutedEventArgs e)
     {
         var (host, user, pass, port, _) = SshCreds();
-        if (MessageBox.Show($"MikroTik export {host}?", "Confirm", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
-        DeviceSshOutput.Text = "MT exporting…";
+        if (MessageBox.Show($"MT export {host}?", "Confirm", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
+        DeviceSshOutput.Text = "MT export…";
         var r = await _mt.ExportConfigAsync(host, user, pass, BackupDir, port).ConfigureAwait(true);
         DeviceSshOutput.Text = FormatResult(r);
-        _diagnosis.Executor.Audit.Record("MikroTikExport", r.Success ? "ok" : "fail", host);
         LogJob("MT-Export", r.Success ? "OK" : "FAIL");
     }
 
     private async void CiscoVersion_Click(object sender, RoutedEventArgs e)
     {
         var (host, user, pass, port, enable) = SshCreds();
-        DeviceSshOutput.Text = "Cisco show version…";
+        DeviceSshOutput.Text = "Cisco version…";
         var r = await _cisco.ShowVersionAsync(host, user, pass, port, enable).ConfigureAwait(true);
         DeviceSshOutput.Text = FormatResult(r);
-        _diagnosis.Executor.Audit.Record("CiscoVersion", r.Success ? "ok" : "fail", host);
         LogJob("IOS-Ver", r.Success ? "OK" : "FAIL");
     }
 
     private async void CiscoShowRun_Click(object sender, RoutedEventArgs e)
     {
         var (host, user, pass, port, enable) = SshCreds();
-        if (MessageBox.Show($"Cisco show running-config on {host}?",
-                "Confirm", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
-        DeviceSshOutput.Text = "Cisco show run…";
+        if (MessageBox.Show($"Cisco show run {host}?", "Confirm", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
+        DeviceSshOutput.Text = "Cisco run…";
         var r = await _cisco.ShowRunningConfigAsync(host, user, pass, BackupDir, port, enable).ConfigureAwait(true);
         DeviceSshOutput.Text = FormatResult(r);
-        _diagnosis.Executor.Audit.Record("CiscoShowRun", r.Success ? "ok" : "fail", host);
         LogJob("IOS-Run", r.Success ? "OK" : "FAIL");
     }
+
+    private async void UbntId_Click(object sender, RoutedEventArgs e)
+    {
+        var (host, user, pass, port, _) = SshCreds();
+        DeviceSshOutput.Text = "UBNT identity…";
+        var r = await _ubnt.IdentityAsync(host, user, pass, port).ConfigureAwait(true);
+        DeviceSshOutput.Text = FormatResult(r);
+        LogJob("UBNT-ID", r.Success ? "OK" : "FAIL");
+    }
+
+    private async void UbntExport_Click(object sender, RoutedEventArgs e)
+    {
+        var (host, user, pass, port, _) = SshCreds();
+        if (MessageBox.Show($"Ubiquiti export {host}?", "Confirm", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
+        DeviceSshOutput.Text = "UBNT export…";
+        var r = await _ubnt.ExportConfigAsync(host, user, pass, BackupDir, port).ConfigureAwait(true);
+        DeviceSshOutput.Text = FormatResult(r);
+        LogJob("UBNT-Exp", r.Success ? "OK" : "FAIL");
+    }
+
+    private void QueueMtAll_Click(object s, RoutedEventArgs e) => QueueAll(JobKind.MikroTikExport, "MikroTik");
+    private void QueueCiscoAll_Click(object s, RoutedEventArgs e) => QueueAll(JobKind.CiscoShowRun, "Cisco");
+    private void QueueUbntAll_Click(object s, RoutedEventArgs e) => QueueAll(JobKind.UbiquitiExport, "Ubiquiti");
+
+    private void QueueAll(JobKind kind, string vendorHint)
+    {
+        _vault.Load();
+        var entries = _vault.Entries.ToList();
+        if (entries.Count == 0)
+        {
+            MessageBox.Show("Vault is empty. Save devices first.");
+            return;
+        }
+
+        // Prefer vendor match when possible, else queue all
+        var filtered = entries.Where(x =>
+            string.IsNullOrEmpty(x.Vendor) ||
+            x.Vendor.Contains(vendorHint, StringComparison.OrdinalIgnoreCase) ||
+            (vendorHint == "Ubiquiti" && x.Vendor.Contains("Ubiquiti", StringComparison.OrdinalIgnoreCase)) ||
+            (vendorHint == "MikroTik" && x.Vendor.Contains("MikroTik", StringComparison.OrdinalIgnoreCase)) ||
+            (vendorHint == "Cisco" && x.Vendor.Contains("Cisco", StringComparison.OrdinalIgnoreCase))
+        ).ToList();
+        if (filtered.Count == 0) filtered = entries;
+
+        if (MessageBox.Show(
+                $"Queue {filtered.Count} job(s) of type {kind}?\nBackups → {BackupDir}",
+                "Job queue", MessageBoxButton.OKCancel) != MessageBoxResult.OK)
+            return;
+
+        _jobs.EnqueueFromVault(filtered, kind, _vault.UnprotectPassword, _vault.UnprotectEnablePassword);
+        RefreshJobsPanel();
+        LogJob("Queue", filtered.Count.ToString());
+    }
+
+    private void JobsRefresh_Click(object s, RoutedEventArgs e) => RefreshJobsPanel();
 
     private static string FormatResult(DeviceBackupResult r)
         => (r.Success ? "OK\n" : "FAIL\n") + r.Message +
