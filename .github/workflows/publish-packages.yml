@@ -26,6 +26,18 @@ jobs:
           scope: "@beig-rules"
       - name: Publish npm package
         run: |
-          npm publish --access public || npm publish --access public --tag latest
+          set +e
+          out=$(npm publish --access public 2>&1)
+          code=$?
+          echo "$out"
+          if [ $code -eq 0 ]; then
+            echo "Published successfully"
+            exit 0
+          fi
+          if echo "$out" | grep -qi "Cannot publish over existing version\|E409\|EPUBLISHCONFLICT"; then
+            echo "Version already published — OK"
+            exit 0
+          fi
+          exit $code
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
