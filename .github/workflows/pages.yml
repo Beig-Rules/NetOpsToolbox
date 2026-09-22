@@ -15,33 +15,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare static site
+        run: |
+          mkdir -p _site
+          cp index.html _site/index.html
+          cp prototype/index.html _site/prototype.html 2>/dev/null || true
+          mkdir -p _site/data/brands
+          cp data/brands/catalog.v1.json _site/data/brands/catalog.v1.json
+          # simple 404 that points home
+          cat > _site/404.html << 'EOF'
+          <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="refresh" content="0;url=./"/><title>Not found</title></head><body><p><a href="./">NetOps Toolbox</a></p></body></html>
+          EOF
+          ls -la _site
+
       - name: Setup Pages
-        id: pages
         uses: actions/configure-pages@v5
-        continue-on-error: true
 
       - name: Upload artifact
-        if: steps.pages.outcome == 'success'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        if: steps.pages.outcome == 'success'
         uses: actions/deploy-pages@v4
-
-      - name: Pages not enabled yet
-        if: steps.pages.outcome != 'success'
-        run: |
-          echo "::warning::GitHub Pages is not enabled for this repository."
-          echo "Enable once: Settings → Pages → Source = GitHub Actions"
-          echo "Preview meanwhile: https://cdn.jsdelivr.net/gh/Beig-Rules/NetOpsToolbox@main/index.html"
