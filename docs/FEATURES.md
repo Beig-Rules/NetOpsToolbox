@@ -2,25 +2,26 @@
 
 | Area | Status |
 |------|--------|
-| Diagnose | 4 flows + ranked solutions |
-| Actions | FlushDns, RenewDhcp, SetAdapterDnsPublic |
-| Tools | Ping, DNS, Port, Traceroute, Subnet |
-| Firmware | Catalog diagnose (no auto-flash) |
-| Security | ARP baseline + new host diff |
-| Playbooks | Harden, NTP/DNS, WAN triage |
+| Diagnose | 4 flows |
+| Actions | FlushDns, RenewDhcp, Set DNS |
+| Tools | Ping DNS Port Trace Subnet |
+| Firmware | Catalog diagnose |
+| Security | ARP baseline |
+| Playbooks | 3 templates |
 | Reports | TXT + CSV |
-| MikroTik SSH | Identity + `/export` |
-| **Cisco SSH** | `show version`, `show running-config` → file |
-| **Vault** | DPAPI CurrentUser (`vault.json`) |
+| MikroTik | SSH identity + export |
+| Cisco | show version / show run + **enable password** |
+| Vault | DPAPI login + enable, **list / double-click load / delete** |
 
-## Vault
+## Cisco enable
 
-- Path: `%LocalAppData%\NetOpsToolbox\vault.json`
-- Password: `ProtectedData` + entropy `NetOpsToolbox.Vault.v1`
-- Scope: same Windows user only
+1. Enter login password in first PasswordBox
+2. Enter enable secret in second PasswordBox (optional)
+3. Save vault stores both (DPAPI)
+4. show run sends `enable` then password when prompt detected
 
-## Cisco notes
+## Vault UI
 
-- Shell stream + `terminal length 0`
-- Privilege 15 / AAA may be required for `show running-config`
-- Enable password flows not automated in this build (use user with privilege)
+- List shows `host:port user [vendor] +enable`
+- Double-click or Load applies credentials to fields
+- Delete removes selected entry

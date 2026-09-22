@@ -3,6 +3,7 @@ using System.Net.NetworkInformation;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using NetOps.Core;
 using NetOps.Core.Diagnosis;
 using NetOps.Core.Devices;
@@ -46,7 +47,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         LoadCatalog();
         LoadFirmwareCatalog();
-        try { _vault.Load(); } catch { }
+        try { _vault.Load(); RefreshVaultList(); } catch { }
         foreach (var p in PlaybookEngine.All)
             PlaybookBox.Items.Add(p.Title);
         if (PlaybookBox.Items.Count > 0) PlaybookBox.SelectedIndex = 0;
@@ -69,7 +70,7 @@ public partial class MainWindow : Window
                 BrandBox.SelectionChanged += (_, _) => FillModels();
                 FillModels();
             }
-            StatusText.Text = $"Catalog v{_catalog.Version} · vault entries={_vault.Entries.Count}";
+            StatusText.Text = $"Catalog v{_catalog.Version} · vault={_vault.Entries.Count}";
         }
         catch (Exception ex) { StatusText.Text = "Catalog: " + ex.Message; }
     }
@@ -111,9 +112,10 @@ public partial class MainWindow : Window
         ContentOther.Visibility = tag is "Settings" ? Visibility.Visible : Visibility.Collapsed;
         if (tag == "Settings")
             ContentOther.Text =
-                "Vault: %LocalAppData%\\NetOpsToolbox\\vault.json (DPAPI CurrentUser)\n" +
+                "Vault DPAPI: " + _vault.Path + "\n" +
                 "Backups: Documents\\NetOpsToolbox\\backups\n" +
-                "Baseline: %LocalAppData%\\NetOpsToolbox\\lan-baseline.json";
+                "Enable password is for Cisco privileged EXEC only.";
+        if (tag == "Devices") RefreshVaultList();
     }
 
     private static Visibility V(string tag, string name) => tag == name ? Visibility.Visible : Visibility.Collapsed;
@@ -123,6 +125,20 @@ public partial class MainWindow : Window
 
     private string VaultId() => IpBox.Text.Trim() + "|" + SshUserBox.Text.Trim() + "|" + SshPortBox.Text.Trim();
 
+    private void RefreshVaultList()
+    {
+        VaultList.Items.Clear();
+        foreach (var e in _vault.Entries)
+            VaultList.Items.Add(new VaultListItem(e, _vault.DisplayLine(e)));
+        StatusText.Text = $"Vault entries={_vault.Entries.Count}";
+    }
+
+    private void VaultRefresh_Click(object s, RoutedEventArgs e)
+    {
+        try { _vault.Load(); RefreshVaultList(); }
+        catch (Exception ex) { DeviceSshOutput.Text = ex.Message; }
+    }
+
     private void VaultSave_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -130,18 +146,22 @@ public partial class MainWindow : Window
             var host = IpBox.Text.Trim();
             var user = SshUserBox.Text.Trim();
             var pass = SshPassBox.Password;
+            var enable = EnablePassBox.Password;
             if (!int.TryParse(SshPortBox.Text.Trim(), out var port)) port = 22;
             if (string.IsNullOrEmpty(pass))
             {
-                DeviceSshOutput.Text = "Enter password before Save vault.";
+                DeviceSshOutput.Text = "Login password required to save vault.";
                 return;
             }
             var vendor = BrandBox.SelectedItem?.ToString() ?? "";
-            _vault.Upsert(VaultId(), host, user, pass, port, vendor);
-            DeviceSshOutput.Text = $"Vault saved for {host} (DPAPI). File: {_vault.Path}";
+            _vault.Upsert(VaultId(), host, user, pass, port, vendor,
+                string.IsNullOrEmpty(enable) ? null : enable);
+            RefreshVaultList();
+            DeviceSshOutput.Text = $"Vault saved: {host}" +
+                (string.IsNullOrEmpty(enable) ? "" : " (+enable)") +
+                "\n" + _vault.Path;
             _diagnosis.Executor.Audit.Record("VaultSave", "ok", host);
             LogJob("VaultSave", "OK");
-            StatusText.Text = $"Vault entries={_vault.Entries.Count}";
         }
         catch (Exception ex)
         {
@@ -152,6 +172,20 @@ public partial class MainWindow : Window
 
     private void VaultLoad_Click(object sender, RoutedEventArgs e)
     {
+        if (VaultList.SelectedItem is VaultListItem item)
+            ApplyVaultEntry(item.Entry);
+        else
+            LoadVaultByHost();
+    }
+
+    private void VaultList_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (VaultList.SelectedItem is VaultListItem item)
+            ApplyVaultEntry(item.Entry);
+    }
+
+    private void LoadVaultByHost()
+    {
         try
         {
             _vault.Load();
@@ -160,48 +194,72 @@ public partial class MainWindow : Window
                         ?? _vault.Entries.FirstOrDefault(x => x.Id == VaultId());
             if (entry is null)
             {
-                DeviceSshOutput.Text = "No vault entry for this host. Entries: " +
-                    string.Join(", ", _vault.Entries.Select(x => x.Host));
+                DeviceSshOutput.Text = "No vault entry for this host.";
+                RefreshVaultList();
                 return;
             }
-            SshUserBox.Text = entry.Username;
-            SshPortBox.Text = entry.Port.ToString();
-            var pass = _vault.UnprotectPassword(entry);
-            if (pass is null)
-            {
-                DeviceSshOutput.Text = "Could not decrypt password (wrong Windows user?).";
-                return;
-            }
-            SshPassBox.Password = pass;
-            DeviceSshOutput.Text = $"Loaded vault for {entry.Host} / {entry.Username} (vendor={entry.Vendor}).";
-            LogJob("VaultLoad", "OK");
+            ApplyVaultEntry(entry);
         }
-        catch (Exception ex)
-        {
-            DeviceSshOutput.Text = "Vault load failed: " + ex.Message;
-        }
+        catch (Exception ex) { DeviceSshOutput.Text = ex.Message; }
     }
 
-    private (string host, string user, string pass, int port) SshCreds()
+    private void ApplyVaultEntry(VaultEntry entry)
+    {
+        IpBox.Text = entry.Host;
+        SshUserBox.Text = entry.Username;
+        SshPortBox.Text = entry.Port.ToString();
+        var pass = _vault.UnprotectPassword(entry);
+        var enable = _vault.UnprotectEnablePassword(entry);
+        if (pass is null)
+        {
+            DeviceSshOutput.Text = "Decrypt login password failed (wrong Windows user?).";
+            return;
+        }
+        SshPassBox.Password = pass;
+        EnablePassBox.Password = enable ?? "";
+        DeviceSshOutput.Text = $"Loaded {entry.Host} / {entry.Username}" +
+            (enable is not null ? " (+enable)" : "") +
+            $"  [{entry.Vendor}]";
+        LogJob("VaultLoad", "OK");
+    }
+
+    private void VaultDelete_Click(object sender, RoutedEventArgs e)
+    {
+        if (VaultList.SelectedItem is not VaultListItem item)
+        {
+            DeviceSshOutput.Text = "Select a vault row to delete.";
+            return;
+        }
+        if (MessageBox.Show("Delete vault entry for " + item.Entry.Host + "?",
+                "Delete", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
+        _vault.Remove(item.Entry.Id);
+        RefreshVaultList();
+        DeviceSshOutput.Text = "Deleted " + item.Entry.Host;
+        LogJob("VaultDel", "OK");
+    }
+
+    private (string host, string user, string pass, int port, string? enable) SshCreds()
     {
         if (!int.TryParse(SshPortBox.Text.Trim(), out var port)) port = 22;
-        return (IpBox.Text.Trim(), SshUserBox.Text.Trim(), SshPassBox.Password, port);
+        var enable = EnablePassBox.Password;
+        return (IpBox.Text.Trim(), SshUserBox.Text.Trim(), SshPassBox.Password, port,
+            string.IsNullOrEmpty(enable) ? null : enable);
     }
 
     private async void MikrotikTest_Click(object sender, RoutedEventArgs e)
     {
-        var (host, user, pass, port) = SshCreds();
+        var (host, user, pass, port, _) = SshCreds();
         DeviceSshOutput.Text = "MT connecting…";
         var r = await _mt.IdentityAsync(host, user, pass, port).ConfigureAwait(true);
-        DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
+        DeviceSshOutput.Text = FormatResult(r);
         _diagnosis.Executor.Audit.Record("MikroTikIdentity", r.Success ? "ok" : "fail", host);
         LogJob("MT-Test", r.Success ? "OK" : "FAIL");
     }
 
     private async void MikrotikBackup_Click(object sender, RoutedEventArgs e)
     {
-        var (host, user, pass, port) = SshCreds();
-        if (MessageBox.Show($"MikroTik export from {host}?", "Confirm", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
+        var (host, user, pass, port, _) = SshCreds();
+        if (MessageBox.Show($"MikroTik export {host}?", "Confirm", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
         DeviceSshOutput.Text = "MT exporting…";
         var r = await _mt.ExportConfigAsync(host, user, pass, BackupDir, port).ConfigureAwait(true);
         DeviceSshOutput.Text = FormatResult(r);
@@ -211,9 +269,9 @@ public partial class MainWindow : Window
 
     private async void CiscoVersion_Click(object sender, RoutedEventArgs e)
     {
-        var (host, user, pass, port) = SshCreds();
+        var (host, user, pass, port, enable) = SshCreds();
         DeviceSshOutput.Text = "Cisco show version…";
-        var r = await _cisco.ShowVersionAsync(host, user, pass, port).ConfigureAwait(true);
+        var r = await _cisco.ShowVersionAsync(host, user, pass, port, enable).ConfigureAwait(true);
         DeviceSshOutput.Text = FormatResult(r);
         _diagnosis.Executor.Audit.Record("CiscoVersion", r.Success ? "ok" : "fail", host);
         LogJob("IOS-Ver", r.Success ? "OK" : "FAIL");
@@ -221,11 +279,11 @@ public partial class MainWindow : Window
 
     private async void CiscoShowRun_Click(object sender, RoutedEventArgs e)
     {
-        var (host, user, pass, port) = SshCreds();
-        if (MessageBox.Show($"Cisco show running-config from {host}?\nSaved under Documents\\NetOpsToolbox\\backups",
+        var (host, user, pass, port, enable) = SshCreds();
+        if (MessageBox.Show($"Cisco show running-config on {host}?",
                 "Confirm", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
         DeviceSshOutput.Text = "Cisco show run…";
-        var r = await _cisco.ShowRunningConfigAsync(host, user, pass, BackupDir, port).ConfigureAwait(true);
+        var r = await _cisco.ShowRunningConfigAsync(host, user, pass, BackupDir, port, enable).ConfigureAwait(true);
         DeviceSshOutput.Text = FormatResult(r);
         _diagnosis.Executor.Audit.Record("CiscoShowRun", r.Success ? "ok" : "fail", host);
         LogJob("IOS-Run", r.Success ? "OK" : "FAIL");
@@ -238,15 +296,13 @@ public partial class MainWindow : Window
 
     private async void RunDiagnose_Click(object sender, RoutedEventArgs e)
     {
-        DiagnoseBusy.Text = "Collecting…";
+        DiagnoseBusy.Text = "…";
         try
         {
             var (facts, report) = await _diagnosis.RunAsync().ConfigureAwait(true);
             _lastFacts = facts; _lastReport = report;
             var sb = new StringBuilder();
             sb.AppendLine(report.Headline);
-            sb.AppendLine($"GW: {string.Join(",", facts.DefaultGateways)} DNS: {string.Join(",", facts.DnsServers)}");
-            sb.AppendLine($"Proxy: {facts.ProxyEnabled} names={facts.Connectivity.NameResolutionWorks}");
             foreach (var r in report.Results)
             {
                 sb.AppendLine($"[{r.FlowId}] {r.Title}");
@@ -321,9 +377,8 @@ public partial class MainWindow : Window
     {
         var brandName = BrandBox.SelectedItem?.ToString() ?? "";
         var brandId = _catalog?.Brands.FirstOrDefault(b => b.Name == brandName)?.Id ?? brandName.ToLowerInvariant();
-        var model = ModelBox.SelectedItem?.ToString() ?? "";
-        var ver = FwVersionBox.Text.StartsWith("(") ? null : FwVersionBox.Text.Trim();
-        FirmwareOutput.Text = _fw.Diagnose(brandId, model, ver);
+        FirmwareOutput.Text = _fw.Diagnose(brandId, ModelBox.SelectedItem?.ToString() ?? "",
+            FwVersionBox.Text.StartsWith("(") ? null : FwVersionBox.Text.Trim());
         LogJob("Firmware", "OK");
     }
 
@@ -394,4 +449,12 @@ public partial class MainWindow : Window
 
     private void LogJob(string name, string result)
         => JobsText.Text = DateTime.Now.ToString("HH:mm") + "  " + name.PadRight(12) + result + "\n" + JobsText.Text;
+
+    private sealed class VaultListItem
+    {
+        public VaultEntry Entry { get; }
+        public string Display { get; }
+        public VaultListItem(VaultEntry entry, string display) { Entry = entry; Display = display; }
+        public override string ToString() => Display;
+    }
 }
