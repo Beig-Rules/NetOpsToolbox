@@ -1,0 +1,30 @@
+{
+  "name": "@beig-rules/netops-toolbox",
+  "version": "0.1.0",
+  "description": "NetOps Toolbox — Minimal Mono network specialist workbench (Phase 0 shell + brand catalog)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Beig-Rules/NetOpsToolbox.git"
+  },
+  "homepage": "https://beig-rules.github.io/NetOpsToolbox/",
+  "keywords": [
+    "netops",
+    "network",
+    "minimal-mono",
+    "beig-rules",
+    "firmware",
+    "catalog"
+  ],
+  "files": [
+    "index.html",
+    "prototype/**/*",
+    "data/**/*",
+    "docs/**/*",
+    "README.md"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  }
+}

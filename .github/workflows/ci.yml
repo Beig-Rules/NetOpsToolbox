@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate catalog and structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Required files exist
+        run: |
+          test -f index.html
+          test -f README.md
+          test -f data/brands/catalog.v1.json
+          test -f docs/SCREENS.md
+          echo "Required paths OK"
+
+      - name: Validate brand catalog JSON
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          from pathlib import Path
+          p = Path("data/brands/catalog.v1.json")
+          data = json.loads(p.read_text(encoding="utf-8"))
+          assert data.get("version") == 1, "version must be 1"
+          brands = data.get("brands") or []
+          models = data.get("models") or []
+          assert len(brands) >= 5, "expected multiple brands"
+          ids = {b["id"] for b in brands}
+          assert "huawei" in ids and "tp-link" in ids and "mikrotik" in ids
+          for m in models:
+              assert m["brand"] in ids, f"model brand missing: {m}"
+              assert "model" in m and "class" in m
+          print(f"OK brands={len(brands)} models={len(models)}")
+          PY
+
+      - name: HTML shell sanity
+        run: |
+          grep -q "NETOPS TOOLBOX" index.html
+          grep -q "Dashboard" index.html
+          grep -q "Firmware" index.html
+          echo "HTML shell markers OK"
+
+  prototype-sync:
+    name: Root and prototype index match
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare index.html copies
+        run: |
+          if [ -f prototype/index.html ]; then
+            cmp -s index.html prototype/index.html && echo "index files identical" || {
+              echo "::warning::index.html and prototype/index.html differ — keep in sync"
+              exit 0
+            }
+          fi
