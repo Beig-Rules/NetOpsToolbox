@@ -1,38 +1,32 @@
-# Diagnosis engine
+# Diagnosis + Tools
 
 ## Pipeline
 
 ```
-Collect (HostNetwork + scoped Registry)
-  → Facts
-  → Flows
-  → Ranked Solutions
-  → Actions (FlushDns executable; others advisory)
-  → Verify
-  → Audit
+Collect → Facts → Flows → Solutions → Actions (FlushDns, RenewDhcp) → Verify → Audit
 ```
 
-## Flows
+## Executable actions
 
-| Id | Meaning |
-|----|---------|
-| `DNS_FAIL` | LAN/path up, name resolution fails |
-| `NET_NO_WAN` | LAN + gateway OK, beyond-gateway probe fails |
-| `ROUTE_BROKEN` | Missing or multiple default routes |
-| `NET_NO_LAN` | No up adapter with IPv4 |
+| Id | Risk | Verify |
+|----|------|--------|
+| `FlushDns` | Low | resolve dns.google |
+| `RenewDhcp` | Medium | gateway ping + rollback guidance |
 
-## Registry scope (read-only)
+## Advisory actions
 
-- `HKCU\...\Internet Settings` — ProxyEnable / ProxyServer
-- `HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters` — Hostname, Domain, SearchList, NameServer
+SetAdapterDnsPublic, proxy report, CPE/WAN/firmware/physical guidance.
 
-No registry writes.
+## Tools
 
-## Live actions
+| Tool | Input |
+|------|--------|
+| Ping | `1.1.1.1, 8.8.8.8` |
+| DNS | hostname |
+| Port | `host:443` |
+| Traceroute | host (Windows tracert) |
+| Subnet | `192.168.1.0/24` |
 
-| Id | Status |
-|----|--------|
-| `FlushDns` | **Execute** + DNS verify (`dns.google`) + audit |
-| Others | Advisory only |
+## Registry (read-only)
 
-Confirm dialog required before FlushDns.
+Proxy (HKCU) + Tcpip Parameters (HKLM).
