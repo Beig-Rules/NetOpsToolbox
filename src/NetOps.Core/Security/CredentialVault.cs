@@ -13,16 +13,15 @@ public sealed class VaultEntry
     public int Port { get; set; } = 22;
     public string Vendor { get; set; } = "";
     public string? Notes { get; set; }
-    /// <summary>Base64 of DPAPI-protected password bytes (CurrentUser scope).</summary>
+    /// <summary>Base64 DPAPI-protected login password.</summary>
     public string PasswordProtectedBase64 { get; set; } = "";
+    /// <summary>Base64 DPAPI-protected enable password (Cisco); optional.</summary>
+    public string? EnablePasswordProtectedBase64 { get; set; }
 }
 
-/// <summary>
-/// Local credential vault. Passwords encrypted with Windows DPAPI (CurrentUser).
-/// Non-Windows: refuses to persist secrets.
-/// </summary>
 public sealed class CredentialVault
 {
+    private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("NetOpsToolbox.Vault.v1");
     private readonly string _path;
     private List<VaultEntry> _entries = new();
 
@@ -34,36 +33,26 @@ public sealed class CredentialVault
     }
 
     public string Path => _path;
-
     public IReadOnlyList<VaultEntry> Entries => _entries;
 
     public void Load()
     {
-        if (!File.Exists(_path))
-        {
-            _entries = new();
-            return;
-        }
-        var json = File.ReadAllText(_path);
-        _entries = JsonSerializer.Deserialize<List<VaultEntry>>(json) ?? new();
+        if (!File.Exists(_path)) { _entries = new(); return; }
+        _entries = JsonSerializer.Deserialize<List<VaultEntry>>(File.ReadAllText(_path)) ?? new();
     }
 
     public void Save()
     {
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_path)!);
-        var json = JsonSerializer.Serialize(_entries, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(_path, json);
+        File.WriteAllText(_path, JsonSerializer.Serialize(_entries, new JsonSerializerOptions { WriteIndented = true }));
     }
 
-    public void Upsert(string id, string host, string username, string password, int port, string vendor, string? notes = null)
+    public void Upsert(
+        string id, string host, string username, string password, int port, string vendor,
+        string? enablePassword = null, string? notes = null)
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             throw new PlatformNotSupportedException("DPAPI vault requires Windows.");
-
-        var protectedBytes = ProtectedData.Protect(
-            Encoding.UTF8.GetBytes(password),
-            optionalEntropy: Encoding.UTF8.GetBytes("NetOpsToolbox.Vault.v1"),
-            scope: DataProtectionScope.CurrentUser);
 
         var existing = _entries.FirstOrDefault(e => e.Id == id);
         if (existing is null)
@@ -77,33 +66,47 @@ public sealed class CredentialVault
         existing.Port = port;
         existing.Vendor = vendor;
         existing.Notes = notes;
-        existing.PasswordProtectedBase64 = Convert.ToBase64String(protectedBytes);
+        existing.PasswordProtectedBase64 = Protect(password);
+        if (!string.IsNullOrEmpty(enablePassword))
+            existing.EnablePasswordProtectedBase64 = Protect(enablePassword);
+        // if enable left empty on update, keep previous enable blob
+
         Save();
     }
 
-    public string? UnprotectPassword(VaultEntry entry)
-    {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return null;
-        try
-        {
-            var bytes = Convert.FromBase64String(entry.PasswordProtectedBase64);
-            var plain = ProtectedData.Unprotect(
-                bytes,
-                optionalEntropy: Encoding.UTF8.GetBytes("NetOpsToolbox.Vault.v1"),
-                scope: DataProtectionScope.CurrentUser);
-            return Encoding.UTF8.GetString(plain);
-        }
-        catch
-        {
-            return null;
-        }
-    }
+    public string? UnprotectPassword(VaultEntry entry) => Unprotect(entry.PasswordProtectedBase64);
+
+    public string? UnprotectEnablePassword(VaultEntry entry)
+        => string.IsNullOrEmpty(entry.EnablePasswordProtectedBase64)
+            ? null
+            : Unprotect(entry.EnablePasswordProtectedBase64);
 
     public bool Remove(string id)
     {
         var n = _entries.RemoveAll(e => e.Id == id);
         if (n > 0) Save();
         return n > 0;
+    }
+
+    public string DisplayLine(VaultEntry e)
+        => $"{e.Host}:{e.Port}  {e.Username}  [{e.Vendor}]" +
+           (string.IsNullOrEmpty(e.EnablePasswordProtectedBase64) ? "" : "  +enable");
+
+    private static string Protect(string plain)
+    {
+        var bytes = ProtectedData.Protect(Encoding.UTF8.GetBytes(plain), Entropy, DataProtectionScope.CurrentUser);
+        return Convert.ToBase64String(bytes);
+    }
+
+    private static string? Unprotect(string? b64)
+    {
+        if (string.IsNullOrEmpty(b64) || !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return null;
+        try
+        {
+            var plain = ProtectedData.Unprotect(Convert.FromBase64String(b64), Entropy, DataProtectionScope.CurrentUser);
+            return Encoding.UTF8.GetString(plain);
+        }
+        catch { return null; }
     }
 }

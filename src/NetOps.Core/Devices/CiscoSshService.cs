@@ -4,23 +4,23 @@ using Renci.SshNet;
 namespace NetOps.Core.Devices;
 
 /// <summary>
-/// Cisco IOS / IOS-XE over SSH.
-/// Uses a shell stream for paging (terminal length 0) then show commands.
+/// Cisco IOS / IOS-XE over SSH with optional enable password.
 /// </summary>
 public sealed class CiscoSshService
 {
     public Task<DeviceBackupResult> ShowVersionAsync(
-        string host, string username, string password, int port = 22, CancellationToken ct = default)
-        => RunShowAsync(host, username, password, port, "show version", null, ct);
+        string host, string username, string password,
+        int port = 22, string? enablePassword = null, CancellationToken ct = default)
+        => RunShowAsync(host, username, password, port, "show version", null, enablePassword, ct);
 
     public Task<DeviceBackupResult> ShowRunningConfigAsync(
         string host, string username, string password, string localDirectory,
-        int port = 22, CancellationToken ct = default)
-        => RunShowAsync(host, username, password, port, "show running-config", localDirectory, ct);
+        int port = 22, string? enablePassword = null, CancellationToken ct = default)
+        => RunShowAsync(host, username, password, port, "show running-config", localDirectory, enablePassword, ct);
 
     private async Task<DeviceBackupResult> RunShowAsync(
         string host, string username, string password, int port,
-        string showCommand, string? localDirectory, CancellationToken ct)
+        string showCommand, string? localDirectory, string? enablePassword, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(host)) return Fail("Host is required.");
         if (string.IsNullOrWhiteSpace(username)) return Fail("Username is required.");
@@ -35,20 +35,35 @@ public sealed class CiscoSshService
                 if (!client.IsConnected) return Fail("SSH connect failed.");
 
                 using var shell = client.CreateShellStream("vt100", 80, 24, 800, 600, 1024);
-                Thread.Sleep(400);
-                Drain(shell);
+                Thread.Sleep(500);
+                var banner = ReadUntilQuiet(shell, TimeSpan.FromSeconds(3));
+
+                // Enter privileged EXEC if enable password provided
+                if (!string.IsNullOrEmpty(enablePassword))
+                {
+                    shell.WriteLine("enable");
+                    Thread.Sleep(400);
+                    var enablePrompt = ReadUntilQuiet(shell, TimeSpan.FromSeconds(4));
+                    var combined = (banner + enablePrompt).ToLowerInvariant();
+                    if (combined.Contains("password"))
+                    {
+                        shell.WriteLine(enablePassword);
+                        Thread.Sleep(500);
+                        ReadUntilQuiet(shell, TimeSpan.FromSeconds(3));
+                    }
+                }
 
                 shell.WriteLine("terminal length 0");
                 Thread.Sleep(300);
                 Drain(shell);
 
                 shell.WriteLine(showCommand);
-                var output = ReadUntilQuiet(shell, TimeSpan.FromSeconds(45));
+                var output = ReadUntilQuiet(shell, TimeSpan.FromSeconds(50));
                 client.Disconnect();
 
                 output = CleanCiscoOutput(output, showCommand);
                 if (string.IsNullOrWhiteSpace(output))
-                    return Fail("Empty output — check enable mode / AAA / command authorization.");
+                    return Fail("Empty output — try enable password, privilege 15 user, or check AAA.");
 
                 string? path = null;
                 if (!string.IsNullOrWhiteSpace(localDirectory))
@@ -62,7 +77,9 @@ public sealed class CiscoSshService
                 return new DeviceBackupResult
                 {
                     Success = true,
-                    Message = path is null ? "Command OK" : $"Saved ({output.Length} chars).",
+                    Message = path is null
+                        ? (string.IsNullOrEmpty(enablePassword) ? "Command OK" : "Command OK (enable used)")
+                        : $"Saved ({output.Length} chars).",
                     LocalPath = path,
                     Preview = output.Length > 1500 ? output[..1500] + "\n…" : output
                 };
@@ -77,7 +94,7 @@ public sealed class CiscoSshService
     private static void Drain(ShellStream shell)
     {
         while (shell.DataAvailable)
-            shell.Read();
+            _ = shell.Read();
     }
 
     private static string ReadUntilQuiet(ShellStream shell, TimeSpan maxWait)
@@ -92,14 +109,10 @@ public sealed class CiscoSshService
                 sb.Append(shell.Read());
                 lastData = DateTime.UtcNow;
             }
-            else if (DateTime.UtcNow - lastData > TimeSpan.FromMilliseconds(900))
-            {
+            else if (DateTime.UtcNow - lastData > TimeSpan.FromMilliseconds(850))
                 break;
-            }
             else
-            {
-                Thread.Sleep(80);
-            }
+                Thread.Sleep(70);
         }
         return sb.ToString();
     }
@@ -113,6 +126,8 @@ public sealed class CiscoSshService
             var t = line.TrimEnd();
             if (t.Equals(cmd, StringComparison.OrdinalIgnoreCase)) continue;
             if (t.Equals("terminal length 0", StringComparison.OrdinalIgnoreCase)) continue;
+            if (t.Equals("enable", StringComparison.OrdinalIgnoreCase)) continue;
+            if (t.Contains("Password:", StringComparison.OrdinalIgnoreCase) && t.Length < 24) continue;
             list.Add(t);
         }
         return string.Join('\n', list).Trim();
