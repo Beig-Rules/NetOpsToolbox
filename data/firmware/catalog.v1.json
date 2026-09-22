@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "brand": "mikrotik",
+      "model": "RouterOS (generic)",
+      "recommended": "7.16",
+      "channel": "stable",
+      "notes": "Check download.mikrotik.com for exact package",
+      "flash": "ssh",
+      "downloadHint": "https://mikrotik.com/download"
+    },
+    {
+      "brand": "tp-link",
+      "model": "Archer router",
+      "recommended": "latest-stable",
+      "channel": "stable",
+      "notes": "Use official TP-Link support page for exact hardware version",
+      "flash": "web_upload",
+      "downloadHint": "https://www.tp-link.com/support/download/"
+    },
+    {
+      "brand": "huawei",
+      "model": "EchoLife ONT",
+      "recommended": "isp-approved",
+      "channel": "stable",
+      "notes": "Prefer ISP-provided image; do not flash random firmware",
+      "flash": "web_upload",
+      "downloadHint": "ISP or Huawei support"
+    },
+    {
+      "brand": "cisco",
+      "model": "IOS / IOS-XE",
+      "recommended": "recommended-release",
+      "channel": "stable",
+      "notes": "Use Cisco software center; match feature set and license",
+      "flash": "ssh",
+      "downloadHint": "https://software.cisco.com"
+    },
+    {
+      "brand": "asus",
+      "model": "RT / ZenWiFi",
+      "recommended": "latest-stable",
+      "channel": "stable",
+      "notes": "ASUS support download by exact model",
+      "flash": "web_upload",
+      "downloadHint": "https://www.asus.com/support/"
+    }
+  ]
+}
