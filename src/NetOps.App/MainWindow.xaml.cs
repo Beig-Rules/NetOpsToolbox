@@ -101,6 +101,7 @@ public partial class MainWindow : Window
     private async void RunDiagnose_Click(object sender, RoutedEventArgs e)
     {
         RunDiagnoseBtn.IsEnabled = false;
+        ApplyFlushDnsBtn.IsEnabled = false;
         DiagnoseBusy.Text = "Collecting facts…";
         DiagnoseOutput.Text = "";
         try
@@ -113,6 +114,14 @@ public partial class MainWindow : Window
             sb.AppendLine($"Adapters: {facts.Adapters.Count} | Gateways: {string.Join(", ", facts.DefaultGateways)}");
             sb.AppendLine($"DNS: {string.Join(", ", facts.DnsServers)}");
             sb.AppendLine($"Proxy: {(facts.ProxyEnabled ? facts.ProxyServer ?? "on" : "off")}");
+            if (facts.Registry is not null)
+            {
+                sb.AppendLine($"Registry host: {facts.Registry.Hostname} domain={facts.Registry.Domain}");
+                if (!string.IsNullOrWhiteSpace(facts.Registry.StaticNameServer))
+                    sb.AppendLine($"Registry NameServer: {facts.Registry.StaticNameServer}");
+                if (!string.IsNullOrWhiteSpace(facts.Registry.SearchList))
+                    sb.AppendLine($"SearchList: {facts.Registry.SearchList}");
+            }
             sb.AppendLine($"Gateway reachable: {facts.Connectivity.GatewayReachable} RTT={facts.Connectivity.GatewayRttMs}ms");
             sb.AppendLine($"Public probe: {facts.Connectivity.PublicDnsReachable} | DNS name: {facts.Connectivity.NameResolutionWorks}");
             if (facts.Connectivity.ResolvedProbe is not null)
@@ -144,7 +153,7 @@ public partial class MainWindow : Window
             }
 
             sb.AppendLine();
-            sb.AppendLine("Mutating execute is not enabled in this build (advisory pipeline only).");
+            sb.AppendLine("Live execute available: Flush DNS (button above). Other actions remain advisory.");
             DiagnoseOutput.Text = sb.ToString();
             StatusText.Text = "Diagnosis complete · " + report.Headline;
         }
@@ -156,6 +165,61 @@ public partial class MainWindow : Window
         finally
         {
             DiagnoseBusy.Text = "";
+            RunDiagnoseBtn.IsEnabled = true;
+            ApplyFlushDnsBtn.IsEnabled = true;
+        }
+    }
+
+    private async void ApplyFlushDns_Click(object sender, RoutedEventArgs e)
+    {
+        var confirm = MessageBox.Show(
+            "Run ipconfig /flushdns on this PC, then verify name resolution?\n\nThis is a low-risk local action.",
+            "Confirm Flush DNS",
+            MessageBoxButton.OKCancel,
+            MessageBoxImage.Question);
+
+        if (confirm != MessageBoxResult.OK)
+            return;
+
+        ApplyFlushDnsBtn.IsEnabled = false;
+        RunDiagnoseBtn.IsEnabled = false;
+        DiagnoseBusy.Text = "Executing FlushDns…";
+        try
+        {
+            var result = await _diagnosis.ExecuteActionAsync("FlushDns").ConfigureAwait(true);
+            var sb = new StringBuilder();
+            sb.AppendLine(DiagnoseOutput.Text);
+            sb.AppendLine();
+            sb.AppendLine("=== ACTION: FlushDns ===");
+            sb.AppendLine(result.Success ? "SUCCESS" : "FAILED");
+            if (result.Skipped) sb.AppendLine("(skipped)");
+            sb.AppendLine(result.Message);
+            if (!string.IsNullOrWhiteSpace(result.StdOut)) sb.AppendLine("stdout: " + result.StdOut);
+            if (!string.IsNullOrWhiteSpace(result.StdErr)) sb.AppendLine("stderr: " + result.StdErr);
+            if (result.VerifyOk is not null)
+                sb.AppendLine($"verify: {(result.VerifyOk == true ? "OK" : "FAIL")} — {result.VerifyDetail}");
+
+            sb.AppendLine();
+            sb.AppendLine("=== AUDIT ===");
+            foreach (var a in _diagnosis.Executor.Audit.Snapshot().TakeLast(5))
+                sb.AppendLine($"{a.At:HH:mm:ss} {a.ActionId} {a.Outcome} {a.Detail}");
+
+            DiagnoseOutput.Text = sb.ToString();
+            StatusText.Text = result.Success
+                ? "FlushDns applied · verify=" + (result.VerifyOk == true ? "OK" : "check")
+                : "FlushDns failed";
+            JobsText.Text = DateTime.Now.ToString("HH:mm") + "  FlushDns   localhost  " +
+                            (result.Success ? "OK" : "FAIL") + "\n" + JobsText.Text;
+        }
+        catch (Exception ex)
+        {
+            DiagnoseOutput.Text += "\n\nAction error: " + ex.Message;
+            StatusText.Text = "Action error";
+        }
+        finally
+        {
+            DiagnoseBusy.Text = "";
+            ApplyFlushDnsBtn.IsEnabled = true;
             RunDiagnoseBtn.IsEnabled = true;
         }
     }

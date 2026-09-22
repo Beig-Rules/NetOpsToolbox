@@ -3,10 +3,16 @@
 ## Pipeline
 
 ```
-Collect (HostNetwork + scoped Registry) → Facts → Flows → Ranked Solutions → Actions (advisory Phase 1)
+Collect (HostNetwork + scoped Registry)
+  → Facts
+  → Flows
+  → Ranked Solutions
+  → Actions (FlushDns executable; others advisory)
+  → Verify
+  → Audit
 ```
 
-## Flows implemented
+## Flows
 
 | Id | Meaning |
 |----|---------|
@@ -17,10 +23,16 @@ Collect (HostNetwork + scoped Registry) → Facts → Flows → Ranked Solutions
 
 ## Registry scope (read-only)
 
-- `HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings` proxy keys only
+- `HKCU\...\Internet Settings` — ProxyEnable / ProxyServer
+- `HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters` — Hostname, Domain, SearchList, NameServer
 
-No registry writes in Phase 1.
+No registry writes.
 
-## Actions
+## Live actions
 
-Catalog in `ActionCatalog`. Execute/rollback of mutating actions is deferred; UI shows advisory solutions only.
+| Id | Status |
+|----|--------|
+| `FlushDns` | **Execute** + DNS verify (`dns.google`) + audit |
+| Others | Advisory only |
+
+Confirm dialog required before FlushDns.

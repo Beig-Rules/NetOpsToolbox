@@ -27,7 +27,7 @@ public sealed class HostNetworkCollector
                 .ToList();
 
             var dnsList = props.DnsAddresses
-                .Where(a => a.AddressFamily == AddressFamily.InterNetwork)
+                .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
                 .Select(a => a.ToString())
                 .ToList();
 
@@ -57,6 +57,8 @@ public sealed class HostNetworkCollector
 
         bool proxyEnabled = false;
         string? proxyServer = null;
+        RegistryHostFacts? regFacts = null;
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             try
@@ -69,23 +71,37 @@ public sealed class HostNetworkCollector
             {
                 notes.Add("Registry proxy read skipped: " + ex.Message);
             }
+
+            try
+            {
+                var tcp = RegistryNetworkCollector.ReadTcpipParameters();
+                regFacts = new RegistryHostFacts
+                {
+                    Hostname = tcp.Hostname,
+                    Domain = tcp.Domain,
+                    SearchList = tcp.SearchList,
+                    StaticNameServer = tcp.NameServer
+                };
+                if (!string.IsNullOrWhiteSpace(tcp.NameServer))
+                    notes.Add("HKLM Tcpip NameServer: " + tcp.NameServer);
+            }
+            catch (Exception ex)
+            {
+                notes.Add("Registry TCP/IP read skipped: " + ex.Message);
+            }
         }
         else
         {
             notes.Add("Registry collector skipped (non-Windows).");
         }
 
-        var routes = new List<RouteFact>();
-        foreach (var g in gateways)
+        var routes = gateways.Select(g => new RouteFact
         {
-            routes.Add(new RouteFact
-            {
-                Destination = "0.0.0.0/0",
-                Gateway = g,
-                Interface = "",
-                Metric = 0
-            });
-        }
+            Destination = "0.0.0.0/0",
+            Gateway = g,
+            Interface = "",
+            Metric = 0
+        }).ToList();
 
         return new HostFacts
         {
@@ -96,7 +112,8 @@ public sealed class HostNetworkCollector
             ProxyServer = proxyServer,
             Routes = routes,
             Connectivity = connectivity,
-            CollectorNotes = notes
+            CollectorNotes = notes,
+            Registry = regFacts
         };
     }
 

@@ -11,6 +11,15 @@ public sealed class HostFacts
     public List<RouteFact> Routes { get; init; } = new();
     public ConnectivityFact Connectivity { get; init; } = new();
     public List<string> CollectorNotes { get; init; } = new();
+    public RegistryHostFacts? Registry { get; init; }
+}
+
+public sealed class RegistryHostFacts
+{
+    public string? Hostname { get; init; }
+    public string? Domain { get; init; }
+    public string? SearchList { get; init; }
+    public string? StaticNameServer { get; init; }
 }
 
 public sealed class AdapterFact
