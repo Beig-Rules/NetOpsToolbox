@@ -91,14 +91,14 @@
           <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
             <ComboBox x:Name="BrandBox" Width="120" Margin="0,0,6,0"/>
             <ComboBox x:Name="ModelBox" Width="140" Margin="0,0,6,0"/>
-            <TextBox x:Name="IpBox" Width="120" Margin="0,0,6,0" FontFamily="Consolas" Text="192.168.1.1"/>
+            <TextBox x:Name="IpBox" Width="120" FontFamily="Consolas" Text="192.168.1.1" Margin="0,0,6,0"/>
             <Button Content="Add" Padding="10,5" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="AddDevice_Click"/>
           </StackPanel>
           <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
             <TextBox x:Name="SshUserBox" Width="80" Margin="0,0,6,0" Text="admin"/>
             <PasswordBox x:Name="SshPassBox" Width="100" Margin="0,0,6,0"/>
             <PasswordBox x:Name="EnablePassBox" Width="100" Margin="0,0,6,0"/>
-            <TextBox x:Name="SshPortBox" Width="40" Margin="0,0,6,0" FontFamily="Consolas" Text="22"/>
+            <TextBox x:Name="SshPortBox" Width="40" FontFamily="Consolas" Text="22" Margin="0,0,6,0"/>
             <Button Content="Save vault" Padding="8,5" Margin="0,0,4,0" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="VaultSave_Click"/>
             <Button Content="Load" Padding="8,5" Margin="0,0,4,0" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="VaultLoad_Click"/>
             <Button Content="Delete" Padding="8,5" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="VaultDelete_Click"/>
@@ -148,6 +148,7 @@
             <Button Content="Port" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolPort_Click"/>
             <Button Content="Traceroute" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolTrace_Click"/>
             <Button Content="Subnet" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolSubnet_Click"/>
+            <Button Content="Speed" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolSpeed_Click"/>
           </WrapPanel>
         </StackPanel>
         <ScrollViewer><TextBlock x:Name="ToolsOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Ready."/></ScrollViewer>
