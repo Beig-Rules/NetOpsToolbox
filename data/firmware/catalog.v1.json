@@ -1,12 +1,21 @@
 {
-  "version": 1,
+  "version": "1.1",
   "entries": [
     {
       "brand": "mikrotik",
       "model": "RouterOS (generic)",
       "recommended": "7.16",
       "channel": "stable",
-      "notes": "Check download.mikrotik.com for exact package",
+      "notes": "Match architecture (arm/arm64/x86). Prefer long-term if production.",
+      "flash": "ssh",
+      "downloadHint": "https://mikrotik.com/download"
+    },
+    {
+      "brand": "mikrotik",
+      "model": "hAP ax3",
+      "recommended": "7.16",
+      "channel": "stable",
+      "notes": "Wireless package required for Wi-Fi features.",
       "flash": "ssh",
       "downloadHint": "https://mikrotik.com/download"
     },
@@ -15,7 +24,16 @@
       "model": "Archer router",
       "recommended": "latest-stable",
       "channel": "stable",
-      "notes": "Use official TP-Link support page for exact hardware version",
+      "notes": "Hardware version (V1/V2/…) must match image.",
+      "flash": "web_upload",
+      "downloadHint": "https://www.tp-link.com/support/download/"
+    },
+    {
+      "brand": "tp-link",
+      "model": "EAP access point",
+      "recommended": "latest-stable",
+      "channel": "stable",
+      "notes": "Controller-managed EAPs may need Omada-compatible build.",
       "flash": "web_upload",
       "downloadHint": "https://www.tp-link.com/support/download/"
     },
@@ -24,7 +42,7 @@
       "model": "EchoLife ONT",
       "recommended": "isp-approved",
       "channel": "stable",
-      "notes": "Prefer ISP-provided image; do not flash random firmware",
+      "notes": "Prefer ISP image only; wrong flash bricks CPE.",
       "flash": "web_upload",
       "downloadHint": "ISP or Huawei support"
     },
@@ -33,7 +51,16 @@
       "model": "IOS / IOS-XE",
       "recommended": "recommended-release",
       "channel": "stable",
-      "notes": "Use Cisco software center; match feature set and license",
+      "notes": "Match feature set, license, and platform (ISR/Catalyst).",
+      "flash": "ssh",
+      "downloadHint": "https://software.cisco.com"
+    },
+    {
+      "brand": "cisco",
+      "model": "Catalyst 9300",
+      "recommended": "recommended-release",
+      "channel": "stable",
+      "notes": "Use install mode; verify ROMMON compatibility.",
       "flash": "ssh",
       "downloadHint": "https://software.cisco.com"
     },
@@ -42,9 +69,54 @@
       "model": "RT / ZenWiFi",
       "recommended": "latest-stable",
       "channel": "stable",
-      "notes": "ASUS support download by exact model",
+      "notes": "Exact model SKU required on ASUS support.",
       "flash": "web_upload",
       "downloadHint": "https://www.asus.com/support/"
+    },
+    {
+      "brand": "d-link",
+      "model": "DIR / COVR",
+      "recommended": "latest-stable",
+      "channel": "stable",
+      "notes": "Region firmware may differ; verify HW rev.",
+      "flash": "web_upload",
+      "downloadHint": "https://support.dlink.com"
+    },
+    {
+      "brand": "ubiquiti",
+      "model": "EdgeRouter / UniFi",
+      "recommended": "official-stable",
+      "channel": "stable",
+      "notes": "UniFi Network Application version must align with AP firmware.",
+      "flash": "ssh_or_controller",
+      "downloadHint": "https://www.ui.com/download/"
+    },
+    {
+      "brand": "netgear",
+      "model": "Nighthawk / Orbi",
+      "recommended": "latest-stable",
+      "channel": "stable",
+      "notes": "Use model-specific download; avoid third-party images.",
+      "flash": "web_upload",
+      "downloadHint": "https://www.netgear.com/support/"
+    },
+    {
+      "brand": "zyxel",
+      "model": "VMG / NWA",
+      "recommended": "latest-stable",
+      "channel": "stable",
+      "notes": "Carrier ONTs often locked to ISP firmware.",
+      "flash": "web_upload",
+      "downloadHint": "https://www.zyxel.com/global/en/support"
+    },
+    {
+      "brand": "fortinet",
+      "model": "FortiGate",
+      "recommended": "recommended-maturity",
+      "channel": "stable",
+      "notes": "Use FortiGuard recommended release for your branch; plan maintenance window.",
+      "flash": "gui_or_tftp",
+      "downloadHint": "https://support.fortinet.com"
     }
   ]
 }
