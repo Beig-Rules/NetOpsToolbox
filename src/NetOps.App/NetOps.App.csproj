@@ -10,7 +10,7 @@
     <AssemblyName>NetOpsToolbox</AssemblyName>
     <Product>NetOps Toolbox</Product>
     <Company>Beig-Rules</Company>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\NetOps.Core\NetOps.Core.csproj" />
@@ -18,5 +18,6 @@
   <ItemGroup>
     <None Include="..\..\data\brands\catalog.v1.json" Link="catalog.v1.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\data\firmware\catalog.v1.json" Link="firmware-catalog.v1.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\data\credentials\defaults.v1.json" Link="defaults.v1.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
