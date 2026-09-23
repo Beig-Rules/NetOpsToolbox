@@ -128,7 +128,7 @@
           <Button Content="Run diagnosis" Padding="12,7" Margin="0,0,8,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="RunDiagnose_Click"/>
           <Button Content="Flush DNS" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ApplyFlushDns_Click"/>
           <Button Content="Renew DHCP" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ApplyRenewDhcp_Click"/>
-          <Button Content="Set DNS 1.1.1.1" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ApplySetDns_Click"/>
+          <Button Content="Set DNS 1.1.1.1" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ApplySetDnsNic_Click"/>
           <TextBlock x:Name="DiagnoseBusy" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
         </WrapPanel>
         <ScrollViewer><TextBlock x:Name="DiagnoseOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Diagnose."/></ScrollViewer>
