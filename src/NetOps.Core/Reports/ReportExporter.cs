@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Text;
 using NetOps.Core.Audit;
 using NetOps.Core.Diagnosis;
@@ -119,6 +120,79 @@ public static class ReportExporter
                 Row("audit", a.ActionId, $"{a.At:u};{a.Outcome};{a.Detail}");
         }
 
+        return sb.ToString();
+    }
+
+    /// <summary>Minimal Mono-styled standalone HTML report.</summary>
+    public static string BuildHtml(
+        HostFacts? facts,
+        DiagnosisReport? diagnosis,
+        LanDiffResult? lan,
+        IEnumerable<AuditEntry>? audit)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"/>");
+        sb.AppendLine("<title>NetOps Toolbox Report</title>");
+        sb.AppendLine("<style>");
+        sb.AppendLine("body{font-family:Segoe UI,system-ui,sans-serif;background:#0a0a0a;color:#f5f5f5;margin:0;padding:24px;}");
+        sb.AppendLine("h1{font-size:18px;font-weight:600;letter-spacing:.04em;margin:0 0 8px;}");
+        sb.AppendLine("h2{font-size:12px;text-transform:uppercase;color:#888;margin:24px 0 8px;font-weight:600;}");
+        sb.AppendLine(".meta{color:#888;font-size:12px;margin-bottom:16px;}");
+        sb.AppendLine(".card{border:1px solid #333;padding:12px 16px;margin:0 0 12px;background:#111;}");
+        sb.AppendLine("pre,code{font-family:Consolas,ui-monospace,monospace;font-size:12px;white-space:pre-wrap;}");
+        sb.AppendLine("ul{margin:4px 0;padding-left:18px;} li{margin:2px 0;}");
+        sb.AppendLine(".ok{color:#a3e635;} .warn{color:#fbbf24;} .bad{color:#f87171;}");
+        sb.AppendLine("footer{margin-top:32px;font-size:11px;color:#555;}");
+        sb.AppendLine("</style></head><body>");
+        sb.AppendLine("<h1>NETOPS TOOLBOX REPORT</h1>");
+        sb.AppendLine("<div class=\"meta\">Generated " + WebUtility.HtmlEncode(DateTimeOffset.Now.ToString("u")) + " · Proprietary · Beig-Rules</div>");
+
+        if (facts is not null)
+        {
+            sb.AppendLine("<h2>Facts</h2><div class=\"card\"><pre>");
+            sb.AppendLine("Adapters: " + facts.Adapters.Count);
+            sb.AppendLine("Gateways: " + WebUtility.HtmlEncode(string.Join(", ", facts.DefaultGateways)));
+            sb.AppendLine("DNS: " + WebUtility.HtmlEncode(string.Join(", ", facts.DnsServers)));
+            sb.AppendLine("Proxy: " + facts.ProxyEnabled + " " + WebUtility.HtmlEncode(facts.ProxyServer ?? ""));
+            sb.AppendLine("GW reachable: " + facts.Connectivity.GatewayReachable + " RTT=" + facts.Connectivity.GatewayRttMs);
+            sb.AppendLine("Public probe: " + facts.Connectivity.PublicDnsReachable);
+            sb.AppendLine("Name resolution: " + facts.Connectivity.NameResolutionWorks);
+            sb.AppendLine("</pre></div>");
+        }
+
+        if (diagnosis is not null)
+        {
+            sb.AppendLine("<h2>Diagnosis</h2><div class=\"card\">");
+            sb.AppendLine("<p><strong>" + WebUtility.HtmlEncode(diagnosis.Headline) + "</strong></p><ul>");
+            foreach (var r in diagnosis.Results)
+            {
+                sb.AppendLine("<li><code>" + WebUtility.HtmlEncode(r.FlowId) + "</code> " +
+                              WebUtility.HtmlEncode(r.Title) + "</li>");
+            }
+            sb.AppendLine("</ul><p>Solutions:</p><ul>");
+            foreach (var s in diagnosis.RankedSolutions)
+                sb.AppendLine("<li>#" + s.Score + " [" + WebUtility.HtmlEncode(s.Risk) + "] " +
+                              WebUtility.HtmlEncode(s.Title) + "</li>");
+            sb.AppendLine("</ul></div>");
+        }
+
+        if (lan is not null)
+        {
+            sb.AppendLine("<h2>LAN security</h2><div class=\"card\"><pre>");
+            sb.AppendLine(WebUtility.HtmlEncode(lan.Summary));
+            sb.AppendLine("</pre></div>");
+        }
+
+        if (audit is not null)
+        {
+            sb.AppendLine("<h2>Audit</h2><div class=\"card\"><pre>");
+            foreach (var a in audit)
+                sb.AppendLine(WebUtility.HtmlEncode($"{a.At:u} {a.ActionId} {a.Outcome} {a.Detail}"));
+            sb.AppendLine("</pre></div>");
+        }
+
+        sb.AppendLine("<footer>© Beig-Rules / Big Flow · All Rights Reserved · NOT open source</footer>");
+        sb.AppendLine("</body></html>");
         return sb.ToString();
     }
 
