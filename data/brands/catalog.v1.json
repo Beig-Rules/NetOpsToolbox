@@ -1,28 +1,95 @@
 {
-  "version": 1,
+  "version": "1.1",
   "brands": [
-    {"id": "huawei", "name": "Huawei", "classes": ["AdslModem", "FiberOnt", "Router", "Ap"]},
-    {"id": "tp-link", "name": "TP-Link", "classes": ["AdslModem", "FiberOnt", "Router", "Ap", "Switch"]},
-    {"id": "d-link", "name": "D-Link", "classes": ["AdslModem", "Router", "Ap", "Switch"]},
-    {"id": "asus", "name": "ASUS", "classes": ["Router", "Ap"]},
-    {"id": "mikrotik", "name": "MikroTik", "classes": ["Router", "Switch", "Ap"]},
-    {"id": "cisco", "name": "Cisco", "classes": ["Router", "Switch", "Ap"]},
-    {"id": "zyxel", "name": "Zyxel", "classes": ["AdslModem", "FiberOnt", "Router", "Switch"]},
-    {"id": "zte", "name": "ZTE", "classes": ["AdslModem", "FiberOnt", "Router"]},
-    {"id": "netgear", "name": "Netgear", "classes": ["Router", "Ap", "Switch"]},
-    {"id": "linksys", "name": "Linksys", "classes": ["Router", "Ap"]},
-    {"id": "ubiquiti", "name": "Ubiquiti", "classes": ["Router", "Switch", "Ap"]},
-    {"id": "other", "name": "Other", "classes": ["Router", "Switch", "Ap", "AdslModem", "FiberOnt"]}
-  ],
-  "models": [
-    {"brand": "huawei", "model": "HG-series (ADSL)", "class": "AdslModem", "protocols": ["https", "http"], "flash": "web_upload"},
-    {"brand": "huawei", "model": "EchoLife ONT", "class": "FiberOnt", "protocols": ["https"], "flash": "web_upload"},
-    {"brand": "tp-link", "model": "TD/Archer modem-router", "class": "AdslModem", "protocols": ["https", "http"], "flash": "web_upload"},
-    {"brand": "tp-link", "model": "Archer router", "class": "Router", "protocols": ["https", "http"], "flash": "web_upload"},
-    {"brand": "d-link", "model": "DSL series", "class": "AdslModem", "protocols": ["https", "http"], "flash": "web_upload"},
-    {"brand": "asus", "model": "RT / ZenWiFi", "class": "Router", "protocols": ["https"], "flash": "web_upload"},
-    {"brand": "mikrotik", "model": "RouterOS (generic)", "class": "Router", "protocols": ["ssh", "api"], "flash": "ssh"},
-    {"brand": "cisco", "model": "IOS / IOS-XE", "class": "Router", "protocols": ["ssh"], "flash": "ssh"},
-    {"brand": "other", "model": "Custom / Unknown", "class": "Router", "protocols": ["https", "ssh"], "flash": "manual_only"}
+    {
+      "id": "huawei",
+      "name": "Huawei",
+      "models": [
+        { "model": "HG8245H", "type": "ont" },
+        { "model": "HS8145V5", "type": "ont" },
+        { "model": "AR2220", "type": "router" }
+      ]
+    },
+    {
+      "id": "tp-link",
+      "name": "TP-Link",
+      "models": [
+        { "model": "Archer C6", "type": "router" },
+        { "model": "Archer AX55", "type": "router" },
+        { "model": "TL-WR841N", "type": "router" },
+        { "model": "EAP225", "type": "ap" }
+      ]
+    },
+    {
+      "id": "d-link",
+      "name": "D-Link",
+      "models": [
+        { "model": "DIR-825", "type": "router" },
+        { "model": "DIR-X5460", "type": "router" },
+        { "model": "DGS-1210-28", "type": "switch" }
+      ]
+    },
+    {
+      "id": "asus",
+      "name": "ASUS",
+      "models": [
+        { "model": "RT-AX86U", "type": "router" },
+        { "model": "RT-AC68U", "type": "router" },
+        { "model": "GT-AX11000", "type": "router" }
+      ]
+    },
+    {
+      "id": "mikrotik",
+      "name": "MikroTik",
+      "models": [
+        { "model": "hAP ac2", "type": "router" },
+        { "model": "hAP ax3", "type": "router" },
+        { "model": "CCR2004", "type": "router" },
+        { "model": "CRS328-24P-4S+", "type": "switch" }
+      ]
+    },
+    {
+      "id": "cisco",
+      "name": "Cisco",
+      "models": [
+        { "model": "ISR 4331", "type": "router" },
+        { "model": "Catalyst 2960", "type": "switch" },
+        { "model": "Catalyst 9300", "type": "switch" },
+        { "model": "ASA 5506", "type": "firewall" }
+      ]
+    },
+    {
+      "id": "ubiquiti",
+      "name": "Ubiquiti",
+      "models": [
+        { "model": "EdgeRouter X", "type": "router" },
+        { "model": "UniFi Dream Machine", "type": "router" },
+        { "model": "U6-LR", "type": "ap" }
+      ]
+    },
+    {
+      "id": "netgear",
+      "name": "NETGEAR",
+      "models": [
+        { "model": "R7000", "type": "router" },
+        { "model": "GS308", "type": "switch" }
+      ]
+    },
+    {
+      "id": "zyxel",
+      "name": "Zyxel",
+      "models": [
+        { "model": "VMG8825", "type": "modem" },
+        { "model": "NWA50AX", "type": "ap" }
+      ]
+    },
+    {
+      "id": "fortinet",
+      "name": "Fortinet",
+      "models": [
+        { "model": "FortiGate 60F", "type": "firewall" },
+        { "model": "FortiGate 100F", "type": "firewall" }
+      ]
+    }
   ]
 }
