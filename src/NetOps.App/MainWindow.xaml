@@ -122,7 +122,7 @@
         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <Button Content="Queue MT all" Padding="10,6" Margin="0,0,6,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="QueueMtAll_Click"/>
           <Button Content="Queue Cisco all" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="QueueCiscoAll_Click"/>
-          <Button Content="Queue UBNT all" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource BgPrimary}" BorderThickness="1" Click="QueueUbntAll_Click"/>
+          <Button Content="Queue UBNT all" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="QueueUbntAll_Click"/>
           <Button Content="Refresh" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="JobsRefresh_Click"/>
         </WrapPanel>
         <ScrollViewer><TextBlock x:Name="JobsPanelText" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="No jobs."/></ScrollViewer>
