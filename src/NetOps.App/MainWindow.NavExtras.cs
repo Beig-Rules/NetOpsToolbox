@@ -52,6 +52,7 @@ public partial class MainWindow
             EnsureExtraToolButtons();
             EnsureEventLogButton();
             EnsureProxyButton();
+            EnsureCertButton();
         }
         if (tag == "Diagnose")
             EnsureDiagnoseNicPicker();

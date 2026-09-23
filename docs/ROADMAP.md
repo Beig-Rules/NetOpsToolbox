@@ -1,19 +1,20 @@
-# Completion roadmap (modular)
+# Completion roadmap
 
-## Done
-- Diagnosis: 6 flows including proxy + captive portal
-- Tools: full connectivity + system reads + Proxy/PAC + TLS + Event log
-- NIC picker for Set DNS
-- Live monitor, scan, Wi-Fi, SSH, vault, jobs
-- Firmware/brands catalogs expanded
+## Done (production baseline)
+- Diagnosis engine (6 flows)
+- Full Tools suite including Proxy/PAC, Certs, TLS, Event log
+- NIC-aware Set DNS, live monitor, scan, Wi-Fi
+- SSH multi-vendor + DPAPI vault + job queue
+- Firmware/brands catalogs, security baseline
+- **10 playbooks** (harden, NTP/DNS, WAN, captive, new host, TLS, DNS suspect, MikroTik, Cisco, firmware)
 - Reports TXT/CSV/HTML
-- CI unit tests on Linux + Windows native publish
-- Proprietary license pack + bilingual README
+- CI tests + Windows artifact
+- Proprietary license + bilingual README + Minimal Mono UI
 
-## Next (optional polish)
-1. Read-only certificate store summary
-2. More playbook templates
-3. Optional WinUI host (same Core)
+## Optional future
+- WinUI host shell (same Core)
+- SNMP read-only helpers
+- More vendor SSH profiles
 
 ## Non-goals
 - Unauthorized scanning / exploits
