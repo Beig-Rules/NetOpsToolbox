@@ -48,7 +48,12 @@ public partial class MainWindow
     {
         EnsureExtras();
         if (tag == "Tools")
+        {
             EnsureExtraToolButtons();
+            EnsureEventLogButton();
+        }
+        if (tag == "Diagnose")
+            EnsureDiagnoseNicPicker();
         ContentMonitor.Visibility = V(tag, "Monitor");
         ContentScan.Visibility = V(tag, "Scan");
         ContentDefaults.Visibility = V(tag, "Defaults");
