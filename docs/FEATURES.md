@@ -2,21 +2,28 @@
 
 | Area | Status |
 |------|--------|
-| Diagnose | 6 flows: DNS_FAIL, NET_NO_WAN, ROUTE_BROKEN, NET_NO_LAN, PROXY_ON, CAPTIVE_PORTAL |
-| Tools | Ping · DNS · Port · Trace · Subnet · Speed · Public IP · ARP · Route · Netstat · Interfaces · Hosts · TLS · Event log · Proxy · **Certs** |
-| Monitor | Live ping + NIC Mbps |
-| Scan | Subnet TCP ports, ping sweep, Wi-Fi |
-| Defaults | Vendor CPE defaults |
-| Tweaks | netsh TCP |
-| Firmware | Catalog v1.1 |
-| Security | ARP baseline + new host diff |
-| Playbooks | **10** operational templates |
+| Diagnose | 6 flows |
+| Tools | Ping · DNS · Port · Trace · Subnet · Speed · Public IP · ARP · Route · Netstat · Interfaces · Hosts · TLS · Event log · Proxy · Certs · **SNMP** · **Firewall** |
+| Monitor / Scan | Live ping, NIC Mbps, port scan, Wi-Fi |
+| Defaults / Tweaks | Vendor defaults, netsh TCP |
+| Firmware / Security | Catalogs, ARP baseline |
+| Playbooks | 10 templates |
 | Reports | TXT · CSV · HTML |
-| SSH | MikroTik / Cisco / Ubiquiti |
-| Vault | DPAPI |
-| Jobs | Multi-device queue |
+| SSH / Vault / Jobs | MT · Cisco · UBNT · DPAPI · queue |
 | CI | Catalog + xUnit + Windows publish |
+
+## SNMP usage
+
+Tools input examples:
+
+```
+192.168.1.1
+192.168.1.1|public
+192.168.1.1|public|1.3.6.1.2.1.1.5.0
+```
+
+Default: SNMPv2c GET sysDescr + system summary. **Authorized devices only.**
 
 ## License
 
-Proprietary exclusive — Beig-Rules. See LICENSE / ABOUT.md.
+Proprietary exclusive — Beig-Rules.
