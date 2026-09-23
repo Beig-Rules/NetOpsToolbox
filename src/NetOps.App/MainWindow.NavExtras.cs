@@ -11,13 +11,14 @@ public partial class MainWindow
 {
     private readonly LiveMonitorService _monitor = new();
     private readonly DefaultCredentialService _defaults = new();
-    private readonly WindowsNetworkTweaks _tweaks;
+    private WindowsNetworkTweaks? _tweaks;
     private bool _extrasLoaded;
 
     private void EnsureExtras()
     {
         if (_extrasLoaded) return;
         _extrasLoaded = true;
+        _tweaks = new WindowsNetworkTweaks(_diagnosis.Executor.Audit);
         _monitor.Updated += () => Dispatcher.Invoke(() =>
         {
             if (ContentMonitor.Visibility == Visibility.Visible)
@@ -30,14 +31,13 @@ public partial class MainWindow
                 path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "data", "credentials", "defaults.v1.json"));
             if (File.Exists(path)) _defaults.Load(path);
         }
-        catch { }
+        catch { /* optional data file */ }
 
+        TweakBox.Items.Clear();
         foreach (var t in WindowsNetworkTweaks.Catalog)
             TweakBox.Items.Add($"{t.Id} — {t.Title}");
         if (TweakBox.Items.Count > 0) TweakBox.SelectedIndex = 0;
     }
-
-    // Called from constructor via partial — wire in Nav and Closed
 
     private void ShowExtraPanels(string tag)
     {
@@ -67,9 +67,8 @@ public partial class MainWindow
     private void DefaultsLookup_Click(object sender, RoutedEventArgs e)
     {
         EnsureExtras();
-        var brand = DefaultsBrandBox.Text.Trim();
-        DefaultsOutput.Text = _defaults.Format(_defaults.ForBrand(brand));
-        LogJob("Defaults", brand);
+        DefaultsOutput.Text = _defaults.Format(_defaults.ForBrand(DefaultsBrandBox.Text.Trim()));
+        LogJob("Defaults", DefaultsBrandBox.Text.Trim());
     }
 
     private void DefaultsAll_Click(object sender, RoutedEventArgs e)
@@ -82,7 +81,7 @@ public partial class MainWindow
     private async void TweakApply_Click(object sender, RoutedEventArgs e)
     {
         EnsureExtras();
-        if (TweakBox.SelectedIndex < 0) return;
+        if (TweakBox.SelectedIndex < 0 || _tweaks is null) return;
         var def = WindowsNetworkTweaks.Catalog[TweakBox.SelectedIndex];
         if (MessageBox.Show($"Apply '{def.Title}'?\n{def.Description}\nRisk: {def.Risk}",
                 "Tweak", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
@@ -94,12 +93,7 @@ public partial class MainWindow
     }
 
     private void TweakList_Click(object sender, RoutedEventArgs e)
-    {
-        TweaksOutput.Text = WindowsNetworkTweaks.CatalogText();
-    }
+        => TweaksOutput.Text = WindowsNetworkTweaks.CatalogText();
 
-    private void Window_Closed(object? sender, EventArgs e)
-    {
-        _monitor.Dispose();
-    }
+    private void Window_Closed(object? sender, EventArgs e) => _monitor.Dispose();
 }
