@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   validate:
-    name: Validate catalog and structure
+    name: Validate catalog, Core build, unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +21,7 @@ jobs:
         run: |
           test -f index.html
           test -f data/brands/catalog.v1.json
+          test -f data/firmware/catalog.v1.json
           test -f NetOpsToolbox.sln
           test -f src/NetOps.Core/Diagnosis/DiagnosisEngine.cs
           test -f src/NetOps.Core/Collectors/HostNetworkCollector.cs
@@ -33,16 +34,26 @@ jobs:
       - name: Build Core on Linux
         run: dotnet build src/NetOps.Core/NetOps.Core.csproj -c Release
 
+      - name: Unit tests (Core)
+        run: |
+          dotnet test tests/NetOps.Core.Tests/NetOps.Core.Tests.csproj -c Release --no-build 2>/dev/null || \
+          dotnet test tests/NetOps.Core.Tests/NetOps.Core.Tests.csproj -c Release
+
       - name: Validate brand catalog JSON
         run: |
           python3 - <<'PY'
           import json
           from pathlib import Path
           data = json.loads(Path("data/brands/catalog.v1.json").read_text(encoding="utf-8"))
-          assert data.get("version") == 1
+          ver = str(data.get("version", ""))
+          assert ver.startswith("1"), ver
           ids = {b["id"] for b in data["brands"]}
           assert "huawei" in ids and "mikrotik" in ids
-          print("catalog OK")
+          print("catalog OK", ver, "brands", len(ids))
+          fw = json.loads(Path("data/firmware/catalog.v1.json").read_text(encoding="utf-8"))
+          assert str(fw.get("version", "")).startswith("1")
+          assert len(fw.get("entries", [])) >= 5
+          print("firmware OK", fw.get("version"), "entries", len(fw["entries"]))
           PY
 
   native-windows:

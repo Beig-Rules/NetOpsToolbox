@@ -17,7 +17,9 @@ public sealed class DiagnosisEngine
             new DnsFailFlow(),
             new NetNoWanFlow(),
             new RouteBrokenFlow(),
-            new NetNoLanFlow()
+            new NetNoLanFlow(),
+            new ProxyOnFlow(),
+            new CaptivePortalFlow()
         ];
     }
 
