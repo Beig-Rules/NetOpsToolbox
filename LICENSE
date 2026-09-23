@@ -1,0 +1,48 @@
+Copyright (c) 2025–2026 Beig-Rules (Beig). All Rights Reserved.
+
+PROPRIETARY SOFTWARE LICENSE — EXCLUSIVE OWNERSHIP
+
+This software and all associated files, documentation, designs, trademarks,
+data schemas, UI systems (including the Minimal Mono design signature),
+and any derivatives created under the Beig-Rules account (collectively, the
+"Software") are the exclusive property of Beig-Rules ("Owner").
+
+1. NO GRANT OF RIGHTS
+   Except as expressly authorized in a separate written agreement signed by
+   the Owner, no license is granted. You may not use, copy, modify, merge,
+   publish, distribute, sublicense, sell, rent, lease, host, mirror, or
+   otherwise exploit the Software in whole or in part.
+
+2. PROHIBITED ACTIONS (without prior written permission)
+   - Cloning for redistribution or commercial use
+   - Publishing forks or derived works as open source or commercial products
+   - Removing or altering copyright, license, or attribution notices
+   - Using the Software name, branding, or design system as your own product
+   - Reverse engineering for competitive product development
+
+3. VIEWING ON GITHUB
+   Public visibility of this repository does not constitute a license to use
+   the code. Viewing source for personal evaluation does not grant any rights
+   to reproduce or reuse it.
+
+4. THIRD-PARTY COMPONENTS
+   If the Software includes third-party components under their own licenses,
+   those components remain subject to their original terms. All original work
+   by Beig-Rules remains under this proprietary license.
+
+5. NO WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL
+   THE OWNER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM
+   THE SOFTWARE OR ITS USE.
+
+6. ENFORCEMENT
+   Unauthorized use may result in civil and/or criminal remedies available
+   under applicable law. The Owner reserves all rights not expressly granted.
+
+7. CONTACT
+   For commercial licensing or permission requests: contact the Owner via the
+   GitHub account Beig-Rules.
+
+SPDX-License-Identifier: LicenseRef-BeigRules-Proprietary
