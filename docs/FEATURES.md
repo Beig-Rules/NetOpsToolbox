@@ -4,9 +4,9 @@
 |------|--------|
 | Diagnose | 4 flows |
 | Actions | FlushDns, RenewDhcp, Set DNS |
-| Tools | Ping DNS Port Trace Subnet calc |
+| Tools | Ping DNS Port Trace Subnet **Speed** |
 | Monitor | Live ping + NIC Mbps |
-| **Scan** | Subnet TCP port scan, ping sweep, Wi-Fi |
+| Scan | Subnet TCP port scan, ping sweep, Wi-Fi |
 | Defaults | Vendor CPE defaults |
 | Tweaks | netsh TCP |
 | Firmware | Catalog diagnose |
@@ -17,15 +17,12 @@
 | Vault | DPAPI |
 | Jobs | Multi-device queue |
 
-## Scan safety
+## Speed test
 
-- Max 256 hosts (prefix forced ≥ /24)
-- Default common ports: 22,23,53,80,443,445,3389,8080,8443,8728,8729
-- Confirm dialog before port scan
-- Authorized networks only
+- HTTP download throughput (Cloudflare / ThinkBroadband presets)
+- Reports MiB/s and approximate Mbps
+- Application-layer only (not full multi-thread Ookla clone)
 
-## Wi-Fi
+## License
 
-- `netsh wlan show interfaces`
-- `netsh wlan show networks mode=bssid`
-- `netsh wlan show profiles`
+Proprietary exclusive — Beig-Rules. See LICENSE / ABOUT.md.
