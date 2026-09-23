@@ -122,9 +122,11 @@ public partial class MainWindow : Window
                 "Vault: " + _vault.Path + "\n" +
                 "Backups: " + BackupDir + "\n" +
                 "Job concurrency: " + _jobs.MaxConcurrency + "\n" +
-                "Vendors SSH: MikroTik, Cisco, Ubiquiti (EdgeOS/UniFi).";
+                "Vendors SSH: MikroTik, Cisco, Ubiquiti.\n" +
+                "Monitor / Defaults / Tweaks panels available.";
         if (tag == "Devices") RefreshVaultList();
         if (tag == "Jobs") RefreshJobsPanel();
+        ShowExtraPanels(tag);
     }
 
     private static Visibility V(string tag, string name) => tag == name ? Visibility.Visible : Visibility.Collapsed;
@@ -171,37 +173,25 @@ public partial class MainWindow : Window
             var pass = SshPassBox.Password;
             var enable = EnablePassBox.Password;
             if (!int.TryParse(SshPortBox.Text.Trim(), out var port)) port = 22;
-            if (string.IsNullOrEmpty(pass))
-            {
-                DeviceSshOutput.Text = "Login password required.";
-                return;
-            }
+            if (string.IsNullOrEmpty(pass)) { DeviceSshOutput.Text = "Login password required."; return; }
             var vendor = BrandBox.SelectedItem?.ToString() ?? "";
-            _vault.Upsert(VaultId(), host, user, pass, port, vendor,
-                string.IsNullOrEmpty(enable) ? null : enable);
+            _vault.Upsert(VaultId(), host, user, pass, port, vendor, string.IsNullOrEmpty(enable) ? null : enable);
             RefreshVaultList();
             DeviceSshOutput.Text = $"Vault saved: {host}" + (string.IsNullOrEmpty(enable) ? "" : " (+enable)");
             LogJob("VaultSave", "OK");
         }
-        catch (Exception ex)
-        {
-            DeviceSshOutput.Text = "Vault save failed: " + ex.Message;
-            LogJob("VaultSave", "FAIL");
-        }
+        catch (Exception ex) { DeviceSshOutput.Text = "Vault save failed: " + ex.Message; LogJob("VaultSave", "FAIL"); }
     }
 
     private void VaultLoad_Click(object sender, RoutedEventArgs e)
     {
-        if (VaultList.SelectedItem is VaultListItem item)
-            ApplyVaultEntry(item.Entry);
-        else
-            LoadVaultByHost();
+        if (VaultList.SelectedItem is VaultListItem item) ApplyVaultEntry(item.Entry);
+        else LoadVaultByHost();
     }
 
     private void VaultList_DoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (VaultList.SelectedItem is VaultListItem item)
-            ApplyVaultEntry(item.Entry);
+        if (VaultList.SelectedItem is VaultListItem item) ApplyVaultEntry(item.Entry);
     }
 
     private void LoadVaultByHost()
@@ -210,14 +200,8 @@ public partial class MainWindow : Window
         {
             _vault.Load();
             var host = IpBox.Text.Trim();
-            var entry = _vault.Entries.FirstOrDefault(x => x.Host == host)
-                        ?? _vault.Entries.FirstOrDefault(x => x.Id == VaultId());
-            if (entry is null)
-            {
-                DeviceSshOutput.Text = "No vault entry for this host.";
-                RefreshVaultList();
-                return;
-            }
+            var entry = _vault.Entries.FirstOrDefault(x => x.Host == host) ?? _vault.Entries.FirstOrDefault(x => x.Id == VaultId());
+            if (entry is null) { DeviceSshOutput.Text = "No vault entry."; RefreshVaultList(); return; }
             ApplyVaultEntry(entry);
         }
         catch (Exception ex) { DeviceSshOutput.Text = ex.Message; }
@@ -230,25 +214,16 @@ public partial class MainWindow : Window
         SshPortBox.Text = entry.Port.ToString();
         var pass = _vault.UnprotectPassword(entry);
         var enable = _vault.UnprotectEnablePassword(entry);
-        if (pass is null)
-        {
-            DeviceSshOutput.Text = "Decrypt failed (wrong Windows user?).";
-            return;
-        }
+        if (pass is null) { DeviceSshOutput.Text = "Decrypt failed."; return; }
         SshPassBox.Password = pass;
         EnablePassBox.Password = enable ?? "";
-        DeviceSshOutput.Text = $"Loaded {entry.Host} / {entry.Username}" +
-            (enable is not null ? " (+enable)" : "") + $"  [{entry.Vendor}]";
+        DeviceSshOutput.Text = $"Loaded {entry.Host} / {entry.Username}" + (enable is not null ? " (+enable)" : "") + $"  [{entry.Vendor}]";
         LogJob("VaultLoad", "OK");
     }
 
     private void VaultDelete_Click(object sender, RoutedEventArgs e)
     {
-        if (VaultList.SelectedItem is not VaultListItem item)
-        {
-            DeviceSshOutput.Text = "Select a vault row.";
-            return;
-        }
+        if (VaultList.SelectedItem is not VaultListItem item) { DeviceSshOutput.Text = "Select vault row."; return; }
         if (MessageBox.Show("Delete " + item.Entry.Host + "?", "Delete", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
         _vault.Remove(item.Entry.Id);
         RefreshVaultList();
@@ -260,8 +235,7 @@ public partial class MainWindow : Window
     {
         if (!int.TryParse(SshPortBox.Text.Trim(), out var port)) port = 22;
         var enable = EnablePassBox.Password;
-        return (IpBox.Text.Trim(), SshUserBox.Text.Trim(), SshPassBox.Password, port,
-            string.IsNullOrEmpty(enable) ? null : enable);
+        return (IpBox.Text.Trim(), SshUserBox.Text.Trim(), SshPassBox.Password, port, string.IsNullOrEmpty(enable) ? null : enable);
     }
 
     private async void MikrotikTest_Click(object sender, RoutedEventArgs e)
@@ -305,7 +279,7 @@ public partial class MainWindow : Window
     private async void UbntId_Click(object sender, RoutedEventArgs e)
     {
         var (host, user, pass, port, _) = SshCreds();
-        DeviceSshOutput.Text = "UBNT identity…";
+        DeviceSshOutput.Text = "UBNT…";
         var r = await _ubnt.IdentityAsync(host, user, pass, port).ConfigureAwait(true);
         DeviceSshOutput.Text = FormatResult(r);
         LogJob("UBNT-ID", r.Success ? "OK" : "FAIL");
@@ -329,27 +303,12 @@ public partial class MainWindow : Window
     {
         _vault.Load();
         var entries = _vault.Entries.ToList();
-        if (entries.Count == 0)
-        {
-            MessageBox.Show("Vault is empty. Save devices first.");
-            return;
-        }
-
-        // Prefer vendor match when possible, else queue all
+        if (entries.Count == 0) { MessageBox.Show("Vault empty."); return; }
         var filtered = entries.Where(x =>
             string.IsNullOrEmpty(x.Vendor) ||
-            x.Vendor.Contains(vendorHint, StringComparison.OrdinalIgnoreCase) ||
-            (vendorHint == "Ubiquiti" && x.Vendor.Contains("Ubiquiti", StringComparison.OrdinalIgnoreCase)) ||
-            (vendorHint == "MikroTik" && x.Vendor.Contains("MikroTik", StringComparison.OrdinalIgnoreCase)) ||
-            (vendorHint == "Cisco" && x.Vendor.Contains("Cisco", StringComparison.OrdinalIgnoreCase))
-        ).ToList();
+            x.Vendor.Contains(vendorHint, StringComparison.OrdinalIgnoreCase)).ToList();
         if (filtered.Count == 0) filtered = entries;
-
-        if (MessageBox.Show(
-                $"Queue {filtered.Count} job(s) of type {kind}?\nBackups → {BackupDir}",
-                "Job queue", MessageBoxButton.OKCancel) != MessageBoxResult.OK)
-            return;
-
+        if (MessageBox.Show($"Queue {filtered.Count} × {kind}?", "Jobs", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
         _jobs.EnqueueFromVault(filtered, kind, _vault.UnprotectPassword, _vault.UnprotectEnablePassword);
         RefreshJobsPanel();
         LogJob("Queue", filtered.Count.ToString());
