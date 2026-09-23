@@ -2,26 +2,25 @@
 
 | Area | Status |
 |------|--------|
-| Diagnose | 4 flows |
-| Actions | FlushDns, RenewDhcp, Set DNS |
-| Tools | Ping DNS Port Trace Subnet **Speed** |
+| Diagnose | 4 flows + FlushDns / RenewDhcp / Set DNS |
+| Tools | Ping · DNS · Port · Trace · Subnet · **Speed** · **Public IP** · **ARP** |
 | Monitor | Live ping + NIC Mbps |
-| Scan | Subnet TCP port scan, ping sweep, Wi-Fi |
+| Scan | Subnet TCP ports, ping sweep, Wi-Fi |
 | Defaults | Vendor CPE defaults |
 | Tweaks | netsh TCP |
 | Firmware | Catalog diagnose |
-| Security | ARP baseline |
-| Playbooks | 3 templates |
+| Security | ARP baseline + new host diff |
+| Playbooks | Templates |
 | Reports | TXT + CSV |
 | SSH | MikroTik / Cisco / Ubiquiti |
 | Vault | DPAPI |
 | Jobs | Multi-device queue |
 
-## Speed test
+## Tools detail
 
-- HTTP download throughput (Cloudflare / ThinkBroadband presets)
-- Reports MiB/s and approximate Mbps
-- Application-layer only (not full multi-thread Ookla clone)
+- **Speed** — HTTP download (Cloudflare / ThinkBroadband presets)
+- **Public IP** — ipify / ifconfig.me / icanhazip fallback
+- **ARP** — `arp -a` local table
 
 ## License
 
