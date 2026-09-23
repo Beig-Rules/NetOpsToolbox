@@ -57,7 +57,6 @@
         <TextBlock Text="RECENT JOBS" FontSize="11" Foreground="{StaticResource TextMuted}" Margin="0,0,0,8"/>
         <TextBlock x:Name="JobsText" Text="—" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource TextPrimary}"/>
       </StackPanel>
-
       <DockPanel x:Name="ContentMonitor" Visibility="Collapsed">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <TextBox x:Name="MonitorHostsBox" FontFamily="Consolas" Margin="0,0,0,8" Text="1.1.1.1, 8.8.8.8"/>
@@ -68,7 +67,6 @@
         </StackPanel>
         <ScrollViewer><TextBlock x:Name="MonitorOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Live ping + NIC Mbps."/></ScrollViewer>
       </DockPanel>
-
       <DockPanel x:Name="ContentScan" Visibility="Collapsed">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <TextBlock Text="Subnet / range (max /24)" FontSize="11" Foreground="{StaticResource TextMuted}" Margin="0,0,0,4"/>
@@ -85,7 +83,6 @@
         </StackPanel>
         <ScrollViewer><TextBlock x:Name="ScanOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Scan only networks you own. Limited to 256 hosts."/></ScrollViewer>
       </DockPanel>
-
       <DockPanel x:Name="ContentDevices" Visibility="Collapsed">
         <StackPanel DockPanel.Dock="Top">
           <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -117,7 +114,6 @@
         </StackPanel>
         <ScrollViewer><TextBlock x:Name="DeviceSshOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="SSH ready."/></ScrollViewer>
       </DockPanel>
-
       <DockPanel x:Name="ContentJobs" Visibility="Collapsed">
         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <Button Content="Queue MT all" Padding="10,6" Margin="0,0,6,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="QueueMtAll_Click"/>
@@ -127,7 +123,6 @@
         </WrapPanel>
         <ScrollViewer><TextBlock x:Name="JobsPanelText" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="No jobs."/></ScrollViewer>
       </DockPanel>
-
       <DockPanel x:Name="ContentDiagnose" Visibility="Collapsed">
         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <Button Content="Run diagnosis" Padding="12,7" Margin="0,0,8,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="RunDiagnose_Click"/>
@@ -138,7 +133,6 @@
         </WrapPanel>
         <ScrollViewer><TextBlock x:Name="DiagnoseOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Diagnose."/></ScrollViewer>
       </DockPanel>
-
       <DockPanel x:Name="ContentTools" Visibility="Collapsed">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <TextBox x:Name="ToolsInput" FontFamily="Consolas" Margin="0,0,0,8" Text="1.1.1.1, 8.8.8.8"/>
@@ -151,11 +145,14 @@
             <Button Content="Speed" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolSpeed_Click"/>
             <Button Content="Public IP" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolPublicIp_Click"/>
             <Button Content="ARP" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolArp_Click"/>
+            <Button Content="Route" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolRoute_Click"/>
+            <Button Content="Netstat" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolNetstat_Click"/>
+            <Button Content="Interfaces" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolIfaces_Click"/>
+            <Button Content="Hosts" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolHosts_Click"/>
           </WrapPanel>
         </StackPanel>
         <ScrollViewer><TextBlock x:Name="ToolsOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Ready."/></ScrollViewer>
       </DockPanel>
-
       <DockPanel x:Name="ContentDefaults" Visibility="Collapsed">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <StackPanel Orientation="Horizontal">
@@ -166,7 +163,6 @@
         </StackPanel>
         <ScrollViewer><TextBlock x:Name="DefaultsOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Vendor default credentials (authorized use only)."/></ScrollViewer>
       </DockPanel>
-
       <DockPanel x:Name="ContentTweaks" Visibility="Collapsed">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <ComboBox x:Name="TweakBox" Margin="0,0,0,8"/>
@@ -177,7 +173,6 @@
         </StackPanel>
         <ScrollViewer><TextBlock x:Name="TweaksOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Windows TCP tweaks via netsh (admin)."/></ScrollViewer>
       </DockPanel>
-
       <DockPanel x:Name="ContentFirmware" Visibility="Collapsed">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <TextBox x:Name="FwVersionBox" Margin="0,0,0,8" FontFamily="Consolas" Text="(optional current version)"/>
@@ -185,7 +180,6 @@
         </StackPanel>
         <ScrollViewer><TextBlock x:Name="FirmwareOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Firmware."/></ScrollViewer>
       </DockPanel>
-
       <DockPanel x:Name="ContentSecurity" Visibility="Collapsed">
         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <Button Content="Scan LAN" Padding="12,7" Margin="0,0,8,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="SecurityScan_Click"/>
@@ -194,7 +188,6 @@
         </WrapPanel>
         <ScrollViewer><TextBlock x:Name="SecurityOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="LAN."/></ScrollViewer>
       </DockPanel>
-
       <DockPanel x:Name="ContentPlaybooks" Visibility="Collapsed">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <ComboBox x:Name="PlaybookBox" Margin="0,0,0,8"/>
@@ -202,16 +195,15 @@
         </StackPanel>
         <ScrollViewer><TextBlock x:Name="PlaybookOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Playbooks."/></ScrollViewer>
       </DockPanel>
-
       <DockPanel x:Name="ContentReports" Visibility="Collapsed">
         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <Button Content="Generate" Padding="12,7" Margin="0,0,8,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="ReportGenerate_Click"/>
           <Button Content="Save TXT" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ReportSave_Click"/>
           <Button Content="Save CSV" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ReportSaveCsv_Click"/>
+          <Button Content="Save HTML" Padding="12,7" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ReportSaveHtml_Click"/>
         </WrapPanel>
         <ScrollViewer><TextBlock x:Name="ReportOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Reports."/></ScrollViewer>
       </DockPanel>
-
       <TextBlock x:Name="ContentOther" Visibility="Collapsed" TextWrapping="Wrap" Foreground="{StaticResource TextMuted}" FontSize="14"/>
     </Grid>
   </DockPanel>
