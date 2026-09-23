@@ -6,7 +6,11 @@ namespace NetOps.Core.Tests;
 
 public class DiagnosisEngineTests
 {
-    private static HostFacts BaseLan()
+    private static HostFacts BaseLan(
+        bool namesOk = true,
+        bool publicOk = true,
+        bool proxy = false,
+        string? proxyServer = null)
     {
         return new HostFacts
         {
@@ -23,12 +27,14 @@ public class DiagnosisEngineTests
             ],
             DefaultGateways = ["192.168.1.1"],
             DnsServers = ["192.168.1.1"],
+            ProxyEnabled = proxy,
+            ProxyServer = proxyServer,
             Connectivity = new ConnectivityFact
             {
                 GatewayReachable = true,
                 GatewayRttMs = 2,
-                PublicDnsReachable = true,
-                NameResolutionWorks = true
+                PublicDnsReachable = publicOk,
+                NameResolutionWorks = namesOk
             }
         };
     }
@@ -44,9 +50,7 @@ public class DiagnosisEngineTests
     [Fact]
     public void Dns_fail_matches_and_offers_flush()
     {
-        var f = BaseLan();
-        f.Connectivity.NameResolutionWorks = false;
-        var report = new DiagnosisEngine().Evaluate(f);
+        var report = new DiagnosisEngine().Evaluate(BaseLan(namesOk: false));
         Assert.Contains(report.Results, r => r.FlowId == "DNS_FAIL");
         Assert.Contains(report.RankedSolutions, s => s.Id == "flush_dns");
     }
@@ -54,20 +58,14 @@ public class DiagnosisEngineTests
     [Fact]
     public void Proxy_on_matches()
     {
-        var f = BaseLan();
-        f.ProxyEnabled = true;
-        f.ProxyServer = "http://proxy:8080";
-        var report = new DiagnosisEngine().Evaluate(f);
+        var report = new DiagnosisEngine().Evaluate(BaseLan(proxy: true, proxyServer: "http://proxy:8080"));
         Assert.Contains(report.Results, r => r.FlowId == "PROXY_ON");
     }
 
     [Fact]
     public void Captive_portal_heuristic_matches()
     {
-        var f = BaseLan();
-        f.Connectivity.NameResolutionWorks = false;
-        f.Connectivity.PublicDnsReachable = false;
-        var report = new DiagnosisEngine().Evaluate(f);
+        var report = new DiagnosisEngine().Evaluate(BaseLan(namesOk: false, publicOk: false));
         Assert.Contains(report.Results, r => r.FlowId == "CAPTIVE_PORTAL");
         Assert.Contains(report.RankedSolutions, s => s.Id == "open_portal");
     }
