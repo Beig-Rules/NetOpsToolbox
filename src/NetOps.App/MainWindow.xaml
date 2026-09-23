@@ -38,6 +38,7 @@
       <StackPanel>
         <Button Content="Dashboard" Style="{StaticResource NavButton}" Tag="Dashboard" Click="Nav_Click"/>
         <Button Content="Monitor" Style="{StaticResource NavButton}" Tag="Monitor" Click="Nav_Click"/>
+        <Button Content="Scan" Style="{StaticResource NavButton}" Tag="Scan" Click="Nav_Click"/>
         <Button Content="Devices" Style="{StaticResource NavButton}" Tag="Devices" Click="Nav_Click"/>
         <Button Content="Jobs" Style="{StaticResource NavButton}" Tag="Jobs" Click="Nav_Click"/>
         <Button Content="Diagnose" Style="{StaticResource NavButton}" Tag="Diagnose" Click="Nav_Click"/>
@@ -66,6 +67,23 @@
           </WrapPanel>
         </StackPanel>
         <ScrollViewer><TextBlock x:Name="MonitorOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Live ping + NIC Mbps."/></ScrollViewer>
+      </DockPanel>
+
+      <DockPanel x:Name="ContentScan" Visibility="Collapsed">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+          <TextBlock Text="Subnet / range (max /24)" FontSize="11" Foreground="{StaticResource TextMuted}" Margin="0,0,0,4"/>
+          <TextBox x:Name="ScanRangeBox" FontFamily="Consolas" Margin="0,0,0,8" Text="192.168.1.0/24"/>
+          <TextBlock Text="Ports (optional, comma-separated)" FontSize="11" Foreground="{StaticResource TextMuted}" Margin="0,0,0,4"/>
+          <TextBox x:Name="ScanPortsBox" FontFamily="Consolas" Margin="0,0,0,8" Text="22,80,443,445,8728"/>
+          <WrapPanel>
+            <Button Content="Port scan" Padding="12,6" Margin="0,0,8,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="ScanPorts_Click"/>
+            <Button Content="Ping sweep" Padding="12,6" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ScanPingSweep_Click"/>
+            <Button Content="Wi-Fi interface" Padding="12,6" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="WifiIface_Click"/>
+            <Button Content="Wi-Fi networks" Padding="12,6" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="WifiNets_Click"/>
+            <Button Content="Wi-Fi profiles" Padding="12,6" Margin="0,0,8,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="WifiProfiles_Click"/>
+          </WrapPanel>
+        </StackPanel>
+        <ScrollViewer><TextBlock x:Name="ScanOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Scan only networks you own. Limited to 256 hosts."/></ScrollViewer>
       </DockPanel>
 
       <DockPanel x:Name="ContentDevices" Visibility="Collapsed">
@@ -104,7 +122,7 @@
         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
           <Button Content="Queue MT all" Padding="10,6" Margin="0,0,6,6" Background="{StaticResource BgInverse}" Foreground="{StaticResource TextOnInverse}" BorderThickness="0" Click="QueueMtAll_Click"/>
           <Button Content="Queue Cisco all" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="QueueCiscoAll_Click"/>
-          <Button Content="Queue UBNT all" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="QueueUbntAll_Click"/>
+          <Button Content="Queue UBNT all" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource BgPrimary}" BorderThickness="1" Click="QueueUbntAll_Click"/>
           <Button Content="Refresh" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="JobsRefresh_Click"/>
         </WrapPanel>
         <ScrollViewer><TextBlock x:Name="JobsPanelText" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="No jobs."/></ScrollViewer>
