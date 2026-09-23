@@ -149,6 +149,8 @@
             <Button Content="Traceroute" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolTrace_Click"/>
             <Button Content="Subnet" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolSubnet_Click"/>
             <Button Content="Speed" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolSpeed_Click"/>
+            <Button Content="Public IP" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolPublicIp_Click"/>
+            <Button Content="ARP" Padding="10,6" Margin="0,0,6,6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Click="ToolArp_Click"/>
           </WrapPanel>
         </StackPanel>
         <ScrollViewer><TextBlock x:Name="ToolsOutput" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}" Text="Ready."/></ScrollViewer>
