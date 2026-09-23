@@ -21,7 +21,6 @@ public partial class MainWindow
                        ?? FindVisualChild<DockPanel>(ContentDiagnose);
             if (host is null) return;
 
-            // Prefer first WrapPanel in Diagnose
             var wrap = FindVisualChild<WrapPanel>(host);
             if (wrap is null) return;
 
@@ -77,11 +76,26 @@ public partial class MainWindow
     {
         var s = _dnsNicBox?.SelectedItem?.ToString();
         if (string.IsNullOrWhiteSpace(s)) return NicInventory.PreferDefault();
-        // strip leading mark "* " / "+ " / "- "
         var t = s.Trim();
         if (t.Length > 2 && (t[0] is '*' or '+' or '-') && t[1] == ' ')
             return t[2..].Trim();
         return t;
+    }
+
+    /// <summary>Preferred entry for Set DNS — uses NIC combo when available.</summary>
+    private async void ApplySetDnsNic_Click(object s, RoutedEventArgs e)
+    {
+        EnsureDiagnoseNicPicker();
+        var name = SelectedDnsNicName();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            var nic = NetworkInterface.GetAllNetworkInterfaces()
+                .FirstOrDefault(n => n.OperationalStatus == OperationalStatus.Up
+                    && n.GetIPProperties().GatewayAddresses.Any());
+            name = nic?.Name;
+        }
+        _diagnosis.Executor.TargetInterfaceName = name;
+        await RunAction("SetAdapterDnsPublic", $"Set DNS 1.1.1.1 on '{name}'?").ConfigureAwait(true);
     }
 
     private static T? FindVisualChild<T>(DependencyObject? parent) where T : DependencyObject

@@ -4,21 +4,21 @@ Policy: add modules only when they do not break hierarchy or create conflicts.
 
 ## Done
 - Diagnosis engine + 4 flows
-- Safe actions (DNS/DHCP)
-- Tools suite (connectivity + system reads)
+- Safe actions (DNS/DHCP) + **NIC picker for Set DNS**
+- Tools suite (connectivity + system reads + **Event log** + TLS)
 - Live monitor, scan, Wi-Fi
 - SSH vendors + vault + jobs
-- Security baseline, firmware, playbooks
+- Security baseline, firmware **v1.1**, playbooks
 - Reports TXT/CSV/HTML
-- CI + Pages + proprietary license pack
+- CI + Pages + proprietary license
 - Bilingual README
+- Expanded brand catalog
 
-## Next modules (ordered)
-1. Expand brand + firmware catalogs
-2. SSL/TLS handshake probe (host:443)
-3. DNS set with NIC combo in Diagnose UI
-4. Event log reader (Microsoft-Windows-TCPIP)
-5. Optional WinUI host shell (same Core)
+## Next modules
+1. CI smoke test for Core unit helpers
+2. Optional WinUI host shell (same Core)
+3. Certificate store / proxy PAC summary (read-only)
+4. More diagnosis flows (proxy-on, captive portal hints)
 
 ## Non-goals
 - Remote exploit / unauthorized scanning
