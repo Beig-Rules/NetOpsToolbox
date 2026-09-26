@@ -1,5 +1,5 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "brands": [
     {
       "id": "huawei",
@@ -89,6 +89,27 @@
       "models": [
         { "model": "FortiGate 60F", "type": "firewall" },
         { "model": "FortiGate 100F", "type": "firewall" }
+      ]
+    },
+    {
+      "id": "juniper",
+      "name": "Juniper",
+      "models": [
+        { "model": "SRX", "type": "device" },
+        { "model": "EX", "type": "device" },
+        { "model": "MX", "type": "device" },
+        { "model": "QFX", "type": "device" },
+        { "model": "vSRX", "type": "device" }
+      ]
+    },
+    {
+      "id": "aruba",
+      "name": "HPE Aruba",
+      "models": [
+        { "model": "CX 6000", "type": "device" },
+        { "model": "CX 8000", "type": "device" },
+        { "model": "2930F", "type": "device" },
+        { "model": "Instant AP", "type": "device" }
       ]
     }
   ]
