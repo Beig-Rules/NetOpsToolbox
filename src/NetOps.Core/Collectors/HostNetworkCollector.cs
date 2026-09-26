@@ -28,7 +28,7 @@ public sealed class HostNetworkCollector
                 .Select(a => a.Address.ToString())
                 .ToList();
 
-            // DnsAddresses is IPAddressCollection — each item is IPAddress (not UnicastIPAddressInformation)
+            // DnsAddresses is IPAddressCollection — each item is IPAddress
             var dnsList = props.DnsAddresses
                 .Where(a => a.AddressFamily == AddressFamily.InterNetwork)
                 .Select(a => a.ToString())
@@ -101,14 +101,9 @@ public sealed class HostNetworkCollector
         string? proxyServer = null;
         try
         {
-            if (OperatingSystem.IsWindows())
-            {
-                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
-                    "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings");
-                var enable = key?.GetValue("ProxyEnable");
-                proxyEnabled = enable is int i && i == 1;
-                proxyServer = key?.GetValue("ProxyServer") as string;
-            }
+            var (pe, ps) = RegistryNetworkCollector.ReadProxy();
+            proxyEnabled = pe;
+            proxyServer = ps;
         }
         catch (Exception ex)
         {
@@ -118,7 +113,14 @@ public sealed class HostNetworkCollector
         RegistryHostFacts? reg = null;
         try
         {
-            reg = new RegistryNetworkCollector().Collect();
+            var tcp = RegistryNetworkCollector.ReadTcpipParameters();
+            reg = new RegistryHostFacts
+            {
+                Hostname = tcp.Hostname,
+                Domain = tcp.Domain,
+                SearchList = tcp.SearchList,
+                StaticNameServer = tcp.NameServer
+            };
         }
         catch (Exception ex)
         {
