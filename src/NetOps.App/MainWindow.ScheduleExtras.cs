@@ -1,15 +1,16 @@
 using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
 using NetOps.Core.Jobs;
 
 namespace NetOps.App;
 
+/// <summary>
+/// Vault-backed scheduled backups. Handlers are wired from XAML (not decorative).
+/// Requires saved vault entries with matching Vendor filter.
+/// </summary>
 public partial class MainWindow
 {
     private ScheduledJobService? _scheduler;
-    private bool _scheduleWired;
 
     private ScheduledJobService Scheduler
     {
@@ -18,130 +19,123 @@ public partial class MainWindow
             if (_scheduler is null)
             {
                 _scheduler = new ScheduledJobService(_jobs);
-                _scheduler.Changed += () => Dispatcher.Invoke(RefreshSchedulePanel);
+                _scheduler.Changed += () => Dispatcher.Invoke(RefreshJobsAndSchedule);
             }
             return _scheduler;
         }
     }
 
-    private void EnsureScheduleButtons()
-    {
-        if (_scheduleWired) return;
-        try
-        {
-            var root = ContentJobs as DependencyObject;
-            if (root is null) return;
-            var panel = FindScheduleWrap(root);
-            if (panel is null) return;
-
-            void Add(string title, RoutedEventHandler handler)
-            {
-                if (panel.Children.OfType<Button>().Any(b => (b.Content as string) == title))
-                    return;
-                var btn = new Button
-                {
-                    Content = title,
-                    Padding = new Thickness(10, 6, 10, 6),
-                    Margin = new Thickness(0, 0, 6, 6),
-                    BorderThickness = new Thickness(1),
-                    Background = Brushes.Transparent,
-                    Cursor = System.Windows.Input.Cursors.Hand
-                };
-                btn.SetResourceReference(Border.BorderBrushProperty, "TextPrimary");
-                btn.Click += handler;
-                panel.Children.Add(btn);
-            }
-
-            Add("Schedule MT 60m", ScheduleMt_Click);
-            Add("Schedule Cisco 60m", ScheduleCisco_Click);
-            Add("Schedule run due", ScheduleRunDue_Click);
-            Add("Schedule list", ScheduleList_Click);
-            Add("Schedule clear", ScheduleClear_Click);
-            _scheduleWired = true;
-        }
-        catch { }
-    }
-
-    private static WrapPanel? FindScheduleWrap(DependencyObject root)
-    {
-        if (root is WrapPanel wp) return wp;
-        var n = VisualTreeHelper.GetChildrenCount(root);
-        for (var i = 0; i < n; i++)
-        {
-            var f = FindScheduleWrap(VisualTreeHelper.GetChild(root, i));
-            if (f is not null) return f;
-        }
-        if (root is Panel p)
-        {
-            foreach (var c in p.Children)
-            {
-                if (c is WrapPanel w) return w;
-                if (c is DependencyObject d)
-                {
-                    var f = FindScheduleWrap(d);
-                    if (f is not null) return f;
-                }
-            }
-        }
-        return null;
-    }
+    // Keep empty for NavExtras compatibility — XAML owns the buttons now.
+    private void EnsureScheduleButtons() { _ = Scheduler; }
 
     private void ScheduleMt_Click(object s, RoutedEventArgs e)
-        => AddSchedule(JobKind.MikroTikExport, "MikroTik");
+        => RegisterSchedule(JobKind.MikroTikExport, "MikroTik");
 
     private void ScheduleCisco_Click(object s, RoutedEventArgs e)
-        => AddSchedule(JobKind.CiscoShowRun, "Cisco");
+        => RegisterSchedule(JobKind.CiscoShowRun, "Cisco");
 
-    private void AddSchedule(JobKind kind, string vendor)
+    private void ScheduleHuawei_Click(object s, RoutedEventArgs e)
+        => RegisterSchedule(JobKind.HuaweiConfig, "Huawei");
+
+    private void RegisterSchedule(JobKind kind, string vendor)
     {
+        try { _vault.Load(); } catch { /* keep in-memory */ }
+
+        var matching = _vault.Entries
+            .Where(v => v.Vendor.Contains(vendor, StringComparison.OrdinalIgnoreCase)
+                        || string.IsNullOrWhiteSpace(v.Vendor))
+            .ToList();
+
         var entry = Scheduler.Upsert(
             id: vendor.ToLowerInvariant() + "-60",
             kind: kind,
             vendorFilter: vendor,
             interval: TimeSpan.FromMinutes(60),
-            getEntries: () => _vault.Entries,
+            getEntries: () =>
+            {
+                try { _vault.Load(); } catch { }
+                return _vault.Entries;
+            },
             unprotectLogin: _vault.UnprotectPassword,
             unprotectEnable: _vault.UnprotectEnablePassword);
-        RefreshSchedulePanel();
-        JobsPanelText.Text = (JobsPanelText.Text + "\nScheduled: " + entry.SummaryLine()).Trim();
-        LogJob("Schedule", entry.Id);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Schedule registered: " + entry.SummaryLine());
+        sb.AppendLine($"Vault entries total: {_vault.Entries.Count}");
+        sb.AppendLine($"Matching vendor '{vendor}' (or empty vendor): {matching.Count}");
+        if (matching.Count == 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("No matching vault rows yet.");
+            sb.AppendLine("1) Devices → fill host/user/pass → Vault Save");
+            sb.AppendLine("2) Set Brand to " + vendor + " when saving (recommended)");
+            sb.AppendLine("3) Jobs → Schedule run due  (or wait until next hour)");
+        }
+        else
+        {
+            sb.AppendLine("Click 'Schedule run due' to queue now (does not wait 60m).");
+        }
+
+        JobsPanelText.Text = sb.ToString();
+        LogJob("Schedule", entry.Id + " vault=" + matching.Count);
     }
 
     private void ScheduleRunDue_Click(object s, RoutedEventArgs e)
     {
+        try { _vault.Load(); } catch { }
+        var before = _jobs.Snapshot().Count;
         Scheduler.RunDueNow();
-        RefreshSchedulePanel();
-        LogJob("ScheduleDue", "OK");
+        // Force due: set NextRunAt past for all and tick again if none due
+        foreach (var e2 in Scheduler.Snapshot())
+        {
+            if (e2.Enabled)
+                e2.NextRunAt = DateTimeOffset.Now.AddSeconds(-1);
+        }
+        Scheduler.RunDueNow();
+        RefreshJobsAndSchedule();
+        var after = _jobs.Snapshot().Count;
+        JobsPanelText.Text =
+            $"Run due executed. Jobs before={before} after={after}\n\n" + JobsPanelText.Text;
+        LogJob("ScheduleDue", $"jobs={after}");
     }
 
-    private void ScheduleList_Click(object s, RoutedEventArgs e) => RefreshSchedulePanel();
+    private void ScheduleList_Click(object s, RoutedEventArgs e) => RefreshJobsAndSchedule();
 
     private void ScheduleClear_Click(object s, RoutedEventArgs e)
     {
         foreach (var e2 in Scheduler.Snapshot().ToList())
             Scheduler.Remove(e2.Id);
-        RefreshSchedulePanel();
+        RefreshJobsAndSchedule();
+        JobsPanelText.Text = "All schedules cleared.\n\n" + JobsPanelText.Text;
         LogJob("ScheduleClear", "OK");
     }
 
-    private void RefreshSchedulePanel()
+    private void RefreshJobsAndSchedule()
     {
-        var snap = Scheduler.Snapshot();
-        if (snap.Count == 0)
-        {
-            // keep jobs panel content; only append note if empty schedules
-            return;
-        }
         var sb = new StringBuilder();
-        sb.AppendLine("=== Schedules ===");
-        foreach (var e in snap)
-            sb.AppendLine(e.SummaryLine());
-        sb.AppendLine();
+        var schedules = Scheduler.Snapshot();
+        if (schedules.Count > 0)
+        {
+            sb.AppendLine("=== Schedules ===");
+            foreach (var e in schedules)
+                sb.AppendLine(e.SummaryLine());
+            sb.AppendLine();
+        }
+
         sb.AppendLine("=== Jobs ===");
-        foreach (var j in _jobs.Snapshot().Take(30))
+        var jobs = _jobs.Snapshot().Take(40).ToList();
+        if (jobs.Count == 0)
+            sb.AppendLine("No jobs yet. Queue from vault or wait for schedule.");
+        foreach (var j in jobs)
         {
             sb.AppendLine($"{j.CreatedAt:HH:mm:ss}  {j.Status,-10}  {j.Kind,-16}  {j.Host}  {j.Message}");
+            if (!string.IsNullOrEmpty(j.LocalPath))
+                sb.AppendLine("         → " + j.LocalPath);
         }
+
         JobsPanelText.Text = sb.ToString();
+        var last = _jobs.Snapshot().Take(8);
+        JobsText.Text = string.Join("\n", last.Select(j =>
+            $"{j.CreatedAt:HH:mm}  {j.Kind.ToString().PadRight(14)} {j.Status}"));
     }
 }
