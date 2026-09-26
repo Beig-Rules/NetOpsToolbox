@@ -12,6 +12,7 @@ public partial class MainWindow
     private readonly ArubaSshService _aruba = new();
     private readonly FortinetSshService _forti = new();
     private readonly PaloAltoSshService _palo = new();
+    private readonly HuaweiSshService _huawei = new();
     private bool _deviceExtrasWired;
 
     private void EnsureDeviceExtraButtons()
@@ -48,6 +49,8 @@ public partial class MainWindow
             Add("Forti Cfg", FortiConfig_Click);
             Add("Palo Info", PaloInfo_Click);
             Add("Palo Cfg", PaloConfig_Click);
+            Add("Huawei Ver", HuaweiVersion_Click);
+            Add("Huawei Cfg", HuaweiConfig_Click);
             _deviceExtrasWired = true;
         }
         catch { }
@@ -196,6 +199,34 @@ public partial class MainWindow
             var r = await _palo.ShowConfigRunningAsync(host, user, pass, BackupDir, port).ConfigureAwait(true);
             DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
             LogJob("PaloCfg", r.Success ? "OK" : "FAIL");
+        }
+        catch (Exception ex) { DeviceSshOutput.Text = ex.Message; }
+    }
+
+    private async void HuaweiVersion_Click(object sender, RoutedEventArgs e)
+    {
+        var (host, user, pass, _, port) = DeviceCreds();
+        DeviceSshOutput.Text = "Huawei version…";
+        try
+        {
+            var r = await _huawei.DisplayVersionAsync(host, user, pass, port).ConfigureAwait(true);
+            DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
+            LogJob("HuaweiVer", r.Success ? "OK" : "FAIL");
+        }
+        catch (Exception ex) { DeviceSshOutput.Text = ex.Message; }
+    }
+
+    private async void HuaweiConfig_Click(object sender, RoutedEventArgs e)
+    {
+        var (host, user, pass, _, port) = DeviceCreds();
+        if (MessageBox.Show($"Huawei display current-configuration {host}? Large output.", "Confirm", MessageBoxButton.OKCancel) != MessageBoxResult.OK)
+            return;
+        DeviceSshOutput.Text = "Huawei config…";
+        try
+        {
+            var r = await _huawei.DisplayCurrentConfigurationAsync(host, user, pass, BackupDir, port).ConfigureAwait(true);
+            DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
+            LogJob("HuaweiCfg", r.Success ? "OK" : "FAIL");
         }
         catch (Exception ex) { DeviceSshOutput.Text = ex.Message; }
     }

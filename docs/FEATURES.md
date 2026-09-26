@@ -4,7 +4,7 @@
 |------|--------|
 | Diagnose | **10 flows** |
 | Tools | Full suite + SNMP + Firewall + Certs + Proxy + TLS |
-| Devices SSH | MikroTik · Cisco · Ubiquiti · Juniper · Aruba · Fortinet · Palo Alto |
+| Devices SSH | MikroTik · Cisco · Ubiquiti · Juniper · Aruba · Fortinet · Palo Alto · **Huawei VRP** |
 | Jobs | Queue all vendors |
 | Playbooks | Operational templates |
 | Reports | TXT · CSV · HTML |
@@ -37,6 +37,7 @@
 | Aruba | Version, show running-config |
 | Fortinet | system status, full-configuration |
 | Palo Alto | system info, config running |
+| Huawei | display version, current-configuration |
 
 ## License
 
