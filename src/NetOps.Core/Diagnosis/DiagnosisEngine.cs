@@ -19,9 +19,15 @@ public sealed class DiagnosisEngine
             new RouteBrokenFlow(),
             new NetNoLanFlow(),
             new ProxyOnFlow(),
-            new CaptivePortalFlow()
+            new CaptivePortalFlow(),
+            new AdapterAllDownFlow(),
+            new HighLatencyGatewayFlow(),
+            new NoDnsConfiguredFlow(),
+            new WanPartialFailFlow()
         ];
     }
+
+    public IReadOnlyList<string> FlowIds => _flows.Select(f => f.Id).ToList();
 
     public DiagnosisReport Evaluate(HostFacts facts)
     {
