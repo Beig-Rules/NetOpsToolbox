@@ -36,7 +36,7 @@ public partial class MainWindow
                 path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "data", "credentials", "defaults.v1.json"));
             if (File.Exists(path)) _defaults.Load(path);
         }
-        catch { /* optional */ }
+        catch { }
 
         TweakBox.Items.Clear();
         foreach (var t in WindowsNetworkTweaks.Catalog)
@@ -95,7 +95,7 @@ public partial class MainWindow
         ScanOutput.Text = "Scanning…";
         try
         {
-            ScanOutput.Text = await _scanner.ScanPortsAsync(range, ports, _scanCts.Token).ConfigureAwait(true);
+            ScanOutput.Text = await _scanner.ScanAsync(range, ports, ct: _scanCts.Token).ConfigureAwait(true);
             LogJob("PortScan", "OK");
         }
         catch (OperationCanceledException) { ScanOutput.Text = "Cancelled."; }
@@ -108,7 +108,7 @@ public partial class MainWindow
         ScanOutput.Text = "Ping sweep…";
         try
         {
-            ScanOutput.Text = await _scanner.PingSweepAsync(ScanRangeBox.Text.Trim()).ConfigureAwait(true);
+            ScanOutput.Text = FormatAlive(await _scanner.AliveHostsAsync(ScanRangeBox.Text.Trim()).ConfigureAwait(true));
             LogJob("PingSweep", "OK");
         }
         catch (Exception ex) { ScanOutput.Text = ex.Message; }
@@ -116,33 +116,33 @@ public partial class MainWindow
 
     private async void WifiIface_Click(object sender, RoutedEventArgs e)
     {
-        ScanOutput.Text = await _wifi.InterfaceAsync().ConfigureAwait(true);
+        ScanOutput.Text = await _wifi.GetInterfacesAsync().ConfigureAwait(true);
         LogJob("WifiIf", "OK");
     }
 
     private async void WifiNets_Click(object sender, RoutedEventArgs e)
     {
-        ScanOutput.Text = await _wifi.NetworksAsync().ConfigureAwait(true);
+        ScanOutput.Text = await _wifi.GetNetworksAsync().ConfigureAwait(true);
         LogJob("WifiNet", "OK");
     }
 
     private async void WifiProfiles_Click(object sender, RoutedEventArgs e)
     {
-        ScanOutput.Text = await _wifi.ProfilesAsync().ConfigureAwait(true);
+        ScanOutput.Text = await _wifi.GetProfilesAsync().ConfigureAwait(true);
         LogJob("WifiProf", "OK");
     }
 
     private void DefaultsLookup_Click(object sender, RoutedEventArgs e)
     {
         EnsureExtras();
-        DefaultsOutput.Text = _defaults.Lookup(DefaultsBrandBox.Text.Trim());
+        DefaultsOutput.Text = _defaults.Format(_defaults.ForBrand(DefaultsBrandBox.Text.Trim()));
         LogJob("Defaults", "OK");
     }
 
     private void DefaultsAll_Click(object sender, RoutedEventArgs e)
     {
         EnsureExtras();
-        DefaultsOutput.Text = _defaults.All();
+        DefaultsOutput.Text = _defaults.Format(_defaults.All);
         LogJob("DefaultsAll", "OK");
     }
 
@@ -153,7 +153,8 @@ public partial class MainWindow
         var id = sel.Split('—')[0].Trim();
         if (string.IsNullOrEmpty(id)) { TweaksOutput.Text = "Select tweak."; return; }
         if (MessageBox.Show("Apply " + id + "?", "Tweaks", MessageBoxButton.OKCancel) != MessageBoxResult.OK) return;
-        TweaksOutput.Text = await _tweaks!.ApplyAsync(id).ConfigureAwait(true);
+        var ar = await _tweaks!.ApplyAsync(id).ConfigureAwait(true);
+        TweaksOutput.Text = (ar.Success ? "OK: " : "FAIL: ") + ar.Message + (string.IsNullOrEmpty(ar.StdOut) ? "" : "\n" + ar.StdOut);
         LogJob("Tweak", id);
     }
 
@@ -161,6 +162,12 @@ public partial class MainWindow
     {
         EnsureExtras();
         TweaksOutput.Text = string.Join("\n", WindowsNetworkTweaks.Catalog.Select(t => t.Id + " — " + t.Title));
+    }
+
+    private static string FormatAlive(System.Collections.Generic.List<string> hosts)
+    {
+        if (hosts.Count == 0) return "No hosts responded.";
+        return "Alive (" + hosts.Count + "):\n" + string.Join("\n", hosts);
     }
 
     private void Window_Closed(object? sender, EventArgs e)

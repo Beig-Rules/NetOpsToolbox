@@ -25,7 +25,6 @@ public sealed class CredentialVault
 
     public CredentialVault(string? path = null)
     {
-        // Property "Path" shadows System.IO.Path — always qualify.
         _path = path ?? System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "NetOpsToolbox", "vault.json");
@@ -82,6 +81,17 @@ public sealed class CredentialVault
         try { return Unprotect(e.ProtectedEnable); }
         catch { return null; }
     }
+
+    public string DisplayLine(VaultEntry e)
+        => $"{e.Host}:{e.Port}  {e.Username}  [{e.Vendor}]";
+
+    public string? UnprotectPassword(VaultEntry e) => UnprotectLogin(e);
+    public string? UnprotectEnablePassword(VaultEntry e) => UnprotectEnable(e);
+
+    public void Remove(string id) => Delete(id);
+
+    public void Upsert(string id, string host, string user, string password, int port, string vendor, string? enable = null)
+        => Upsert(host, vendor, user, password, port, enable);
 
     private static string Protect(string plain)
     {
