@@ -1,19 +1,21 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using NetOps.Core.Facts;
 
 namespace NetOps.Core.Collectors;
 
+/// <summary>
+/// Collect host network facts (adapters, gateways, DNS, basic connectivity probes).
+/// </summary>
 public sealed class HostNetworkCollector
 {
     public async Task<HostFacts> CollectAsync(CancellationToken ct = default)
     {
-        var notes = new List<string>();
         var adapters = new List<AdapterFact>();
         var gateways = new List<string>();
         var dns = new List<string>();
+        var notes = new List<string>();
 
         foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
         {
@@ -26,8 +28,9 @@ public sealed class HostNetworkCollector
                 .Select(a => a.Address.ToString())
                 .ToList();
 
+            // DnsAddresses is IPAddressCollection — each item is IPAddress (not UnicastIPAddressInformation)
             var dnsList = props.DnsAddresses
-                .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
+                .Where(a => a.AddressFamily == AddressFamily.InterNetwork)
                 .Select(a => a.ToString())
                 .ToList();
 
@@ -46,62 +49,81 @@ public sealed class HostNetworkCollector
                 Status = nic.OperationalStatus.ToString(),
                 IsUp = nic.OperationalStatus == OperationalStatus.Up,
                 IPv4Addresses = ipv4,
-                DnsServers = dnsList
+                DnsServers = dnsList,
+                InterfaceMetric = props.GetIPv4Properties()?.Index
             });
         }
 
         gateways = gateways.Distinct().ToList();
         dns = dns.Distinct().ToList();
 
-        var connectivity = await ProbeConnectivityAsync(gateways, ct).ConfigureAwait(false);
+        bool? gwOk = null;
+        long? gwRtt = null;
+        if (gateways.Count > 0)
+        {
+            try
+            {
+                using var ping = new Ping();
+                var reply = await ping.SendPingAsync(gateways[0], 2500).ConfigureAwait(false);
+                gwOk = reply.Status == IPStatus.Success;
+                if (gwOk == true) gwRtt = reply.RoundtripTime;
+            }
+            catch (Exception ex)
+            {
+                notes.Add("Gateway ping: " + ex.Message);
+                gwOk = false;
+            }
+        }
+
+        bool? publicDns = null;
+        try
+        {
+            using var ping = new Ping();
+            var reply = await ping.SendPingAsync("1.1.1.1", 2500).ConfigureAwait(false);
+            publicDns = reply.Status == IPStatus.Success;
+        }
+        catch { publicDns = false; }
+
+        bool? nameOk = null;
+        string? resolved = null;
+        try
+        {
+            var addrs = await Dns.GetHostAddressesAsync("dns.google", ct).ConfigureAwait(false);
+            nameOk = addrs.Length > 0;
+            resolved = string.Join(",", addrs.Select(a => a.ToString()).Take(3));
+        }
+        catch
+        {
+            nameOk = false;
+        }
 
         bool proxyEnabled = false;
         string? proxyServer = null;
-        RegistryHostFacts? regFacts = null;
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        try
         {
-            try
+            if (OperatingSystem.IsWindows())
             {
-                var reg = RegistryNetworkCollector.ReadProxy();
-                proxyEnabled = reg.Enabled;
-                proxyServer = reg.Server;
-            }
-            catch (Exception ex)
-            {
-                notes.Add("Registry proxy read skipped: " + ex.Message);
-            }
-
-            try
-            {
-                var tcp = RegistryNetworkCollector.ReadTcpipParameters();
-                regFacts = new RegistryHostFacts
-                {
-                    Hostname = tcp.Hostname,
-                    Domain = tcp.Domain,
-                    SearchList = tcp.SearchList,
-                    StaticNameServer = tcp.NameServer
-                };
-                if (!string.IsNullOrWhiteSpace(tcp.NameServer))
-                    notes.Add("HKLM Tcpip NameServer: " + tcp.NameServer);
-            }
-            catch (Exception ex)
-            {
-                notes.Add("Registry TCP/IP read skipped: " + ex.Message);
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                    "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings");
+                var enable = key?.GetValue("ProxyEnable");
+                proxyEnabled = enable is int i && i == 1;
+                proxyServer = key?.GetValue("ProxyServer") as string;
             }
         }
-        else
+        catch (Exception ex)
         {
-            notes.Add("Registry collector skipped (non-Windows).");
+            notes.Add("Proxy read: " + ex.Message);
         }
 
-        var routes = gateways.Select(g => new RouteFact
+        RegistryHostFacts? reg = null;
+        try
         {
-            Destination = "0.0.0.0/0",
-            Gateway = g,
-            Interface = "",
-            Metric = 0
-        }).ToList();
+            reg = new RegistryNetworkCollector().Collect();
+        }
+        catch (Exception ex)
+        {
+            notes.Add("Registry: " + ex.Message);
+        }
 
         return new HostFacts
         {
@@ -110,63 +132,16 @@ public sealed class HostNetworkCollector
             DnsServers = dns,
             ProxyEnabled = proxyEnabled,
             ProxyServer = proxyServer,
-            Routes = routes,
-            Connectivity = connectivity,
-            CollectorNotes = notes,
-            Registry = regFacts
+            Connectivity = new ConnectivityFact
+            {
+                GatewayReachable = gwOk,
+                GatewayRttMs = gwRtt,
+                PublicDnsReachable = publicDns,
+                NameResolutionWorks = nameOk,
+                ResolvedProbe = resolved
+            },
+            Registry = reg,
+            CollectorNotes = notes
         };
-    }
-
-    private static async Task<ConnectivityFact> ProbeConnectivityAsync(List<string> gateways, CancellationToken ct)
-    {
-        bool? gwOk = null;
-        long? gwRtt = null;
-        if (gateways.Count > 0)
-        {
-            var (ok, rtt) = await PingOnceAsync(gateways[0], 2000, ct).ConfigureAwait(false);
-            gwOk = ok;
-            gwRtt = rtt;
-        }
-
-        var (pubOk, _) = await PingOnceAsync("1.1.1.1", 2500, ct).ConfigureAwait(false);
-
-        bool? nameOk = null;
-        string? resolved = null;
-        try
-        {
-            var entry = await Dns.GetHostEntryAsync("dns.google", ct).ConfigureAwait(false);
-            nameOk = entry.AddressList.Length > 0;
-            resolved = string.Join(", ", entry.AddressList.Select(a => a.ToString()).Take(3));
-        }
-        catch
-        {
-            nameOk = false;
-        }
-
-        return new ConnectivityFact
-        {
-            GatewayReachable = gwOk,
-            GatewayRttMs = gwRtt,
-            PublicDnsReachable = pubOk,
-            NameResolutionWorks = nameOk,
-            ResolvedProbe = resolved
-        };
-    }
-
-    private static async Task<(bool ok, long? rtt)> PingOnceAsync(string host, int timeoutMs, CancellationToken ct)
-    {
-        try
-        {
-            using var p = new Ping();
-            var reply = await p.SendPingAsync(host, timeoutMs).ConfigureAwait(false);
-            ct.ThrowIfCancellationRequested();
-            if (reply.Status == IPStatus.Success)
-                return (true, reply.RoundtripTime);
-            return (false, null);
-        }
-        catch
-        {
-            return (false, null);
-        }
     }
 }
