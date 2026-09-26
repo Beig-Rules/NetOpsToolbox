@@ -88,15 +88,6 @@ public partial class MainWindow
         return (host, user, pass, enable, port);
     }
 
-    private string BackupDir()
-    {
-        var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "NetOpsToolbox", "backups");
-        Directory.CreateDirectory(dir);
-        return dir;
-    }
-
     private async void JunosVersion_Click(object sender, RoutedEventArgs e)
     {
         var (host, user, pass, _, port) = DeviceCreds();
@@ -118,7 +109,7 @@ public partial class MainWindow
         DeviceSshOutput.Text = "Junos config…";
         try
         {
-            var r = await _junos.ShowConfigAsync(host, user, pass, BackupDir(), port).ConfigureAwait(true);
+            var r = await _junos.ShowConfigAsync(host, user, pass, BackupDir, port).ConfigureAwait(true);
             DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
             LogJob("JunosCfg", r.Success ? "OK" : "FAIL");
         }
@@ -146,7 +137,7 @@ public partial class MainWindow
         DeviceSshOutput.Text = "Aruba run…";
         try
         {
-            var r = await _aruba.ShowRunningConfigAsync(host, user, pass, BackupDir(), port, enable).ConfigureAwait(true);
+            var r = await _aruba.ShowRunningConfigAsync(host, user, pass, BackupDir, port, enable).ConfigureAwait(true);
             DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
             LogJob("ArubaRun", r.Success ? "OK" : "FAIL");
         }
@@ -174,7 +165,7 @@ public partial class MainWindow
         DeviceSshOutput.Text = "FortiGate config…";
         try
         {
-            var r = await _forti.ShowFullConfigAsync(host, user, pass, BackupDir(), port).ConfigureAwait(true);
+            var r = await _forti.ShowFullConfigAsync(host, user, pass, BackupDir, port).ConfigureAwait(true);
             DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
             LogJob("FortiCfg", r.Success ? "OK" : "FAIL");
         }
@@ -202,7 +193,7 @@ public partial class MainWindow
         DeviceSshOutput.Text = "PAN-OS config…";
         try
         {
-            var r = await _palo.ShowConfigRunningAsync(host, user, pass, BackupDir(), port).ConfigureAwait(true);
+            var r = await _palo.ShowConfigRunningAsync(host, user, pass, BackupDir, port).ConfigureAwait(true);
             DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
             LogJob("PaloCfg", r.Success ? "OK" : "FAIL");
         }

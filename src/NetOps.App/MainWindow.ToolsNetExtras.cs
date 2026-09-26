@@ -8,7 +8,7 @@ namespace NetOps.App;
 public partial class MainWindow
 {
     private readonly SnmpGetService _snmp = new();
-    private readonly WindowsFirewallService _fw = new();
+    private readonly WindowsFirewallService _firewallSvc = new();
     private bool _netExtrasWired;
 
     private void EnsureNetExtraButtons()
@@ -49,15 +49,12 @@ public partial class MainWindow
         ToolsOutput.Text = "SNMP GET…";
         try
         {
-            // Tools input: host  or host|community  or host|community|oid
             var raw = ToolsInput.Text.Trim();
-            // If user typed comma-separated ping list, take first host only for SNMP
             if (!raw.Contains('|') && raw.Contains(','))
                 raw = raw.Split(',')[0].Trim();
 
             if (raw.Contains('|') && raw.Split('|').Length == 2)
             {
-                // host|community → system summary
                 var p = raw.Split('|');
                 ToolsOutput.Text = await _snmp.RunSystemSummaryAsync(p[0].Trim(), p[1].Trim()).ConfigureAwait(true);
             }
@@ -84,7 +81,7 @@ public partial class MainWindow
         ToolsOutput.Text = "Reading firewall profiles…";
         try
         {
-            ToolsOutput.Text = await _fw.RunAsync().ConfigureAwait(true);
+            ToolsOutput.Text = await _firewallSvc.RunAsync().ConfigureAwait(true);
             LogJob("Firewall", "OK");
         }
         catch (Exception ex)
