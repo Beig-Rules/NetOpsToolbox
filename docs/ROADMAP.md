@@ -1,16 +1,15 @@
 # Completion roadmap
 
 ## Done
-- Diagnosis (6 flows), full Tools including **SNMP GET** and **Firewall** summary
-- Proxy, Certs, TLS, Event log, NIC DNS picker
-- Monitor, Scan, Wi-Fi, SSH, Vault, Jobs, Playbooks (10)
-- Reports, CI, proprietary license, Minimal Mono UI
+- Diagnosis, Tools (SNMP, Firewall, Certs, Proxy, TLS, …)
+- SSH: MikroTik, Cisco, Ubiquiti, Juniper, Aruba, Fortinet
+- Jobs queue, Playbooks, Reports, CI, proprietary license
 
 ## Optional next
-- WinUI host (same Core)
-- SNMPv3 / bulk walk (library-backed)
-- Additional vendor SSH (Juniper, Aruba)
+- WinUI host shell
+- Palo Alto SSH profile
+- SNMPv3 (library)
 
 ## Non-goals
-- SNMP SET / unauthorized scanning
+- Unauthorized scanning / SNMP SET
 - Silent registry writes outside allow-list
