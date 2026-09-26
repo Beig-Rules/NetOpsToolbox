@@ -10,7 +10,13 @@ public enum JobKind
     CiscoShowRun,
     CiscoVersion,
     UbiquitiExport,
-    UbiquitiIdentity
+    UbiquitiIdentity,
+    JuniperConfig,
+    JuniperVersion,
+    ArubaShowRun,
+    ArubaVersion,
+    FortinetConfig,
+    FortinetStatus
 }
 
 public enum JobStatus
@@ -50,6 +56,9 @@ public sealed class JobQueue
     private readonly MikroTikSshService _mt = new();
     private readonly CiscoSshService _cisco = new();
     private readonly UbiquitiSshService _ubnt = new();
+    private readonly JuniperSshService _junos = new();
+    private readonly ArubaSshService _aruba = new();
+    private readonly FortinetSshService _forti = new();
     private int _running;
 
     public int MaxConcurrency { get; set; } = 2;
@@ -100,7 +109,6 @@ public sealed class JobQueue
         {
             if (Interlocked.CompareExchange(ref _running, 1, 0) != 0)
             {
-                // another pump may be active; still try to start workers up to MaxConcurrency
             }
 
             var started = 0;
@@ -116,7 +124,6 @@ public sealed class JobQueue
                 return;
             }
 
-            // wait a bit for workers; pump again
             await Task.Delay(200).ConfigureAwait(false);
         }
     }
@@ -139,6 +146,18 @@ public sealed class JobQueue
                     job.Host, job.Username, job.Password, BackupDirectory, job.Port).ConfigureAwait(false),
                 JobKind.UbiquitiIdentity => await _ubnt.IdentityAsync(
                     job.Host, job.Username, job.Password, job.Port).ConfigureAwait(false),
+                JobKind.JuniperConfig => await _junos.ShowConfigAsync(
+                    job.Host, job.Username, job.Password, BackupDirectory, job.Port).ConfigureAwait(false),
+                JobKind.JuniperVersion => await _junos.ShowVersionAsync(
+                    job.Host, job.Username, job.Password, job.Port).ConfigureAwait(false),
+                JobKind.ArubaShowRun => await _aruba.ShowRunningConfigAsync(
+                    job.Host, job.Username, job.Password, BackupDirectory, job.Port, job.EnablePassword).ConfigureAwait(false),
+                JobKind.ArubaVersion => await _aruba.ShowVersionAsync(
+                    job.Host, job.Username, job.Password, job.Port, job.EnablePassword).ConfigureAwait(false),
+                JobKind.FortinetConfig => await _forti.ShowFullConfigAsync(
+                    job.Host, job.Username, job.Password, BackupDirectory, job.Port).ConfigureAwait(false),
+                JobKind.FortinetStatus => await _forti.GetSystemStatusAsync(
+                    job.Host, job.Username, job.Password, job.Port).ConfigureAwait(false),
                 _ => new DeviceBackupResult { Success = false, Message = "Unknown job kind." }
             };
 
@@ -154,7 +173,6 @@ public sealed class JobQueue
         finally
         {
             job.FinishedAt = DateTimeOffset.Now;
-            // clear password from memory after run
             job.Password = "";
             job.EnablePassword = null;
             Changed?.Invoke();
