@@ -16,7 +16,9 @@ public enum JobKind
     ArubaShowRun,
     ArubaVersion,
     FortinetConfig,
-    FortinetStatus
+    FortinetStatus,
+    PaloAltoConfig,
+    PaloAltoInfo
 }
 
 public enum JobStatus
@@ -46,7 +48,7 @@ public sealed class DeviceJob
 }
 
 /// <summary>
-/// Sequential multi-device job runner (safe default concurrency = 1 for SSH stability).
+/// Sequential multi-device job runner (safe default concurrency for SSH stability).
 /// </summary>
 public sealed class JobQueue
 {
@@ -59,6 +61,7 @@ public sealed class JobQueue
     private readonly JuniperSshService _junos = new();
     private readonly ArubaSshService _aruba = new();
     private readonly FortinetSshService _forti = new();
+    private readonly PaloAltoSshService _palo = new();
     private int _running;
 
     public int MaxConcurrency { get; set; } = 2;
@@ -107,9 +110,7 @@ public sealed class JobQueue
     {
         while (true)
         {
-            if (Interlocked.CompareExchange(ref _running, 1, 0) != 0)
-            {
-            }
+            Interlocked.CompareExchange(ref _running, 1, 0);
 
             var started = 0;
             while (started < MaxConcurrency && _queue.TryDequeue(out var job))
@@ -157,6 +158,10 @@ public sealed class JobQueue
                 JobKind.FortinetConfig => await _forti.ShowFullConfigAsync(
                     job.Host, job.Username, job.Password, BackupDirectory, job.Port).ConfigureAwait(false),
                 JobKind.FortinetStatus => await _forti.GetSystemStatusAsync(
+                    job.Host, job.Username, job.Password, job.Port).ConfigureAwait(false),
+                JobKind.PaloAltoConfig => await _palo.ShowConfigRunningAsync(
+                    job.Host, job.Username, job.Password, BackupDirectory, job.Port).ConfigureAwait(false),
+                JobKind.PaloAltoInfo => await _palo.ShowSystemInfoAsync(
                     job.Host, job.Username, job.Password, job.Port).ConfigureAwait(false),
                 _ => new DeviceBackupResult { Success = false, Message = "Unknown job kind." }
             };
