@@ -1,16 +1,15 @@
 # Completion roadmap
 
-## Done
-- Diagnosis **10 flows** (incl. AdapterAllDown, HighLatencyGw, NoDnsConfig, WanPartialFail)
-- Full Tools suite + SNMP + Firewall
-- SSH: MikroTik, Cisco, Ubiquiti, Juniper, Aruba, Fortinet, Palo Alto
-- Jobs, Playbooks, Reports, CI, proprietary license
+## Done (core product complete)
+- Diagnosis **10 flows**
+- Full Tools suite + SNMP v2c + **SNMPv3 (SharpSnmpLib)** + Firewall
+- SSH: MikroTik, Cisco, Ubiquiti, Juniper, Aruba, Fortinet, Palo Alto, Huawei VRP
+- Jobs + **Scheduled job runner** (min 5 min interval, vault-filtered)
+- Playbooks, Reports, Vault (DPAPI), CI, proprietary license
 
-## Optional next
-- SNMPv3 (library-backed auth)
-- WinUI host shell
-- More vendor profiles (e.g. Huawei VRP, Nokia)
-- Scheduled job runner
+## Deferred (out of current scope)
+- Full WinUI 3 host shell (WPF Minimal Mono remains primary)
+- Additional vendors on demand (Nokia, etc.)
 
 ## Non-goals
 - Unauthorized scanning / SNMP SET

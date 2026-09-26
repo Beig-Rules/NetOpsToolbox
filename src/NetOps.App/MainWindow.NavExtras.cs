@@ -60,7 +60,10 @@ public partial class MainWindow
         if (tag == "Devices")
             EnsureDeviceExtraButtons();
         if (tag == "Jobs")
+        {
             EnsureJobExtraButtons();
+            EnsureScheduleButtons();
+        }
         ContentMonitor.Visibility = V(tag, "Monitor");
         ContentScan.Visibility = V(tag, "Scan");
         ContentDefaults.Visibility = V(tag, "Defaults");
@@ -174,5 +177,6 @@ public partial class MainWindow
     {
         _monitor.Stop();
         _scanCts?.Cancel();
+        _scheduler?.Dispose();
     }
 }

@@ -8,6 +8,7 @@ namespace NetOps.App;
 public partial class MainWindow
 {
     private readonly SnmpGetService _snmp = new();
+    private readonly SnmpV3GetService _snmp3 = new();
     private readonly WindowsFirewallService _firewallSvc = new();
     private bool _netExtrasWired;
 
@@ -38,6 +39,7 @@ public partial class MainWindow
             }
 
             Add("SNMP", ToolSnmp_Click);
+            Add("SNMPv3", ToolSnmpV3_Click);
             Add("Firewall", ToolFirewall_Click);
             _netExtrasWired = true;
         }
@@ -73,6 +75,21 @@ public partial class MainWindow
         {
             ToolsOutput.Text = "Error: " + ex.Message;
             LogJob("SNMP", "FAIL");
+        }
+    }
+
+    private async void ToolSnmpV3_Click(object sender, RoutedEventArgs e)
+    {
+        ToolsOutput.Text = "SNMP v3 GET…";
+        try
+        {
+            ToolsOutput.Text = await _snmp3.RunAsync(ToolsInput.Text.Trim()).ConfigureAwait(true);
+            LogJob("SNMPv3", "OK");
+        }
+        catch (Exception ex)
+        {
+            ToolsOutput.Text = "Error: " + ex.Message;
+            LogJob("SNMPv3", "FAIL");
         }
     }
 
