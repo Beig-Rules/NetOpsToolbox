@@ -57,6 +57,10 @@ public partial class MainWindow
         }
         if (tag == "Diagnose")
             EnsureDiagnoseNicPicker();
+        if (tag == "Devices")
+            EnsureDeviceExtraButtons();
+        if (tag == "Jobs")
+            EnsureJobExtraButtons();
         ContentMonitor.Visibility = V(tag, "Monitor");
         ContentScan.Visibility = V(tag, "Scan");
         ContentDefaults.Visibility = V(tag, "Defaults");
