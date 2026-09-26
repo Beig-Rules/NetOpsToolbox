@@ -18,7 +18,9 @@ public enum JobKind
     FortinetConfig,
     FortinetStatus,
     PaloAltoConfig,
-    PaloAltoInfo
+    PaloAltoInfo,
+    HuaweiConfig,
+    HuaweiVersion
 }
 
 public enum JobStatus
@@ -47,9 +49,6 @@ public sealed class DeviceJob
     public DateTimeOffset? FinishedAt { get; set; }
 }
 
-/// <summary>
-/// Sequential multi-device job runner (safe default concurrency for SSH stability).
-/// </summary>
 public sealed class JobQueue
 {
     private readonly ConcurrentQueue<DeviceJob> _queue = new();
@@ -62,6 +61,7 @@ public sealed class JobQueue
     private readonly ArubaSshService _aruba = new();
     private readonly FortinetSshService _forti = new();
     private readonly PaloAltoSshService _palo = new();
+    private readonly HuaweiSshService _huawei = new();
     private int _running;
 
     public int MaxConcurrency { get; set; } = 2;
@@ -111,20 +111,17 @@ public sealed class JobQueue
         while (true)
         {
             Interlocked.CompareExchange(ref _running, 1, 0);
-
             var started = 0;
             while (started < MaxConcurrency && _queue.TryDequeue(out var job))
             {
                 started++;
                 _ = RunOneAsync(job);
             }
-
             if (started == 0)
             {
                 Interlocked.Exchange(ref _running, 0);
                 return;
             }
-
             await Task.Delay(200).ConfigureAwait(false);
         }
     }
@@ -162,6 +159,10 @@ public sealed class JobQueue
                 JobKind.PaloAltoConfig => await _palo.ShowConfigRunningAsync(
                     job.Host, job.Username, job.Password, BackupDirectory, job.Port).ConfigureAwait(false),
                 JobKind.PaloAltoInfo => await _palo.ShowSystemInfoAsync(
+                    job.Host, job.Username, job.Password, job.Port).ConfigureAwait(false),
+                JobKind.HuaweiConfig => await _huawei.DisplayCurrentConfigurationAsync(
+                    job.Host, job.Username, job.Password, BackupDirectory, job.Port).ConfigureAwait(false),
+                JobKind.HuaweiVersion => await _huawei.DisplayVersionAsync(
                     job.Host, job.Username, job.Password, job.Port).ConfigureAwait(false),
                 _ => new DeviceBackupResult { Success = false, Message = "Unknown job kind." }
             };
