@@ -5,7 +5,7 @@ namespace NetOps.Core.Jobs;
 
 /// <summary>
 /// Periodic vault-based job scheduler (read-only backups / version probes).
-/// Safe defaults: min interval 5 minutes, max concurrency delegated to JobQueue.
+/// Min interval 5 minutes. Does nothing useful without vault credentials.
 /// </summary>
 public sealed class ScheduledJobService : IDisposable
 {
@@ -20,7 +20,6 @@ public sealed class ScheduledJobService : IDisposable
 
     public event Action? Changed;
 
-    /// <summary>Register or update a schedule. Interval clamped to ≥ 5 minutes.</summary>
     public ScheduleEntry Upsert(
         string id,
         JobKind kind,
@@ -68,10 +67,17 @@ public sealed class ScheduledJobService : IDisposable
         Changed?.Invoke();
     }
 
-    public void RunDueNow()
+    /// <summary>Mark all enabled schedules due and execute immediately.</summary>
+    public int ForceDueAll()
     {
-        lock (_gate) Tick();
+        var now = DateTimeOffset.Now;
+        foreach (var e in _entries.Values.Where(x => x.Enabled))
+            e.NextRunAt = now.AddSeconds(-1);
+        Tick();
+        return _entries.Values.Count(x => x.Enabled);
     }
+
+    public void RunDueNow() => Tick();
 
     private void EnsureTimer()
     {
@@ -80,7 +86,7 @@ public sealed class ScheduledJobService : IDisposable
             _timer ??= new Timer(_ =>
             {
                 try { Tick(); }
-                catch { /* never crash host */ }
+                catch { }
             }, null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30));
         }
     }
@@ -103,8 +109,10 @@ public sealed class ScheduledJobService : IDisposable
             try
             {
                 var list = e.GetEntries()
-                    .Where(v => string.IsNullOrEmpty(e.VendorFilter)
-                                || v.Vendor.Contains(e.VendorFilter, StringComparison.OrdinalIgnoreCase))
+                    .Where(v =>
+                        string.IsNullOrEmpty(e.VendorFilter)
+                        || string.IsNullOrWhiteSpace(v.Vendor)
+                        || v.Vendor.Contains(e.VendorFilter, StringComparison.OrdinalIgnoreCase))
                     .ToList();
                 if (list.Count > 0)
                 {
