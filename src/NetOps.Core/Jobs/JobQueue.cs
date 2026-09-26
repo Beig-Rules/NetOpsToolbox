@@ -36,8 +36,8 @@ public sealed class DeviceJob
     public JobKind Kind { get; init; }
     public string Host { get; init; } = "";
     public string Username { get; init; } = "";
-    public string Password { get; init; } = "";
-    public string? EnablePassword { get; init; }
+    public string Password { get; set; } = "";
+    public string? EnablePassword { get; set; }
     public int Port { get; init; } = 22;
     public string Vendor { get; init; } = "";
     public JobStatus Status { get; set; } = JobStatus.Queued;
