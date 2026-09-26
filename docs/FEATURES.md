@@ -4,9 +4,9 @@
 |------|--------|
 | Diagnose | 6 flows |
 | Tools | Full suite + SNMP + Firewall + Certs + Proxy + TLS |
-| Devices SSH | MikroTik · Cisco · Ubiquiti · **Juniper** · **Aruba** · **Fortinet** |
+| Devices SSH | MikroTik · Cisco · Ubiquiti · Juniper · Aruba · Fortinet · **Palo Alto** |
 | Jobs | Queue all vendors |
-| Playbooks | 13+ templates |
+| Playbooks | Operational templates |
 | Reports | TXT · CSV · HTML |
 | Vault | DPAPI |
 | CI | Catalog + xUnit + Windows publish |
@@ -18,9 +18,10 @@
 | MikroTik | Test, Export |
 | Cisco | Version, show run |
 | Ubiquiti | Identity, Export |
-| Juniper | Version, configuration (display set) |
+| Juniper | Version, configuration |
 | Aruba | Version, show running-config |
-| Fortinet | get system status, show full-configuration |
+| Fortinet | system status, full-configuration |
+| Palo Alto | system info, config running |
 
 ## License
 

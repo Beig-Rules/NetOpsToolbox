@@ -40,6 +40,7 @@ public partial class MainWindow
             Add("Queue Junos all", QueueJunosAll_Click);
             Add("Queue Aruba all", QueueArubaAll_Click);
             Add("Queue Forti all", QueueFortiAll_Click);
+            Add("Queue Palo all", QueuePaloAll_Click);
             _jobExtrasWired = true;
         }
         catch { }
@@ -72,4 +73,5 @@ public partial class MainWindow
     private void QueueJunosAll_Click(object s, RoutedEventArgs e) => QueueAll(JobKind.JuniperConfig, "Juniper");
     private void QueueArubaAll_Click(object s, RoutedEventArgs e) => QueueAll(JobKind.ArubaShowRun, "Aruba");
     private void QueueFortiAll_Click(object s, RoutedEventArgs e) => QueueAll(JobKind.FortinetConfig, "Fortinet");
+    private void QueuePaloAll_Click(object s, RoutedEventArgs e) => QueueAll(JobKind.PaloAltoConfig, "PaloAlto");
 }

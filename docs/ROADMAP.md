@@ -1,14 +1,14 @@
 # Completion roadmap
 
 ## Done
-- Diagnosis, Tools (SNMP, Firewall, Certs, Proxy, TLS, …)
-- SSH: MikroTik, Cisco, Ubiquiti, Juniper, Aruba, Fortinet
-- Jobs queue, Playbooks, Reports, CI, proprietary license
+- Diagnosis + full Tools suite
+- SSH: MikroTik, Cisco, Ubiquiti, Juniper, Aruba, Fortinet, **Palo Alto**
+- Jobs, Playbooks, Reports, CI, proprietary license
 
 ## Optional next
 - WinUI host shell
-- Palo Alto SSH profile
-- SNMPv3 (library)
+- SNMPv3 (library-backed)
+- More diagnosis flows
 
 ## Non-goals
 - Unauthorized scanning / SNMP SET

@@ -11,6 +11,7 @@ public partial class MainWindow
     private readonly JuniperSshService _junos = new();
     private readonly ArubaSshService _aruba = new();
     private readonly FortinetSshService _forti = new();
+    private readonly PaloAltoSshService _palo = new();
     private bool _deviceExtrasWired;
 
     private void EnsureDeviceExtraButtons()
@@ -45,6 +46,8 @@ public partial class MainWindow
             Add("Aruba Run", ArubaShowRun_Click);
             Add("Forti Status", FortiStatus_Click);
             Add("Forti Cfg", FortiConfig_Click);
+            Add("Palo Info", PaloInfo_Click);
+            Add("Palo Cfg", PaloConfig_Click);
             _deviceExtrasWired = true;
         }
         catch { }
@@ -174,6 +177,34 @@ public partial class MainWindow
             var r = await _forti.ShowFullConfigAsync(host, user, pass, BackupDir(), port).ConfigureAwait(true);
             DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
             LogJob("FortiCfg", r.Success ? "OK" : "FAIL");
+        }
+        catch (Exception ex) { DeviceSshOutput.Text = ex.Message; }
+    }
+
+    private async void PaloInfo_Click(object sender, RoutedEventArgs e)
+    {
+        var (host, user, pass, _, port) = DeviceCreds();
+        DeviceSshOutput.Text = "PAN-OS system info…";
+        try
+        {
+            var r = await _palo.ShowSystemInfoAsync(host, user, pass, port).ConfigureAwait(true);
+            DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
+            LogJob("PaloInfo", r.Success ? "OK" : "FAIL");
+        }
+        catch (Exception ex) { DeviceSshOutput.Text = ex.Message; }
+    }
+
+    private async void PaloConfig_Click(object sender, RoutedEventArgs e)
+    {
+        var (host, user, pass, _, port) = DeviceCreds();
+        if (MessageBox.Show($"PAN-OS show config running {host}? Large output.", "Confirm", MessageBoxButton.OKCancel) != MessageBoxResult.OK)
+            return;
+        DeviceSshOutput.Text = "PAN-OS config…";
+        try
+        {
+            var r = await _palo.ShowConfigRunningAsync(host, user, pass, BackupDir(), port).ConfigureAwait(true);
+            DeviceSshOutput.Text = (r.Success ? "OK\n" : "FAIL\n") + r.Message + "\n" + (r.Preview ?? "");
+            LogJob("PaloCfg", r.Success ? "OK" : "FAIL");
         }
         catch (Exception ex) { DeviceSshOutput.Text = ex.Message; }
     }
