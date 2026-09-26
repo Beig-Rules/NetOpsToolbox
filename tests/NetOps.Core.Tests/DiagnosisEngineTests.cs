@@ -10,7 +10,8 @@ public class DiagnosisEngineTests
         bool namesOk = true,
         bool publicOk = true,
         bool proxy = false,
-        string? proxyServer = null)
+        string? proxyServer = null,
+        long? gwRtt = 2)
     {
         return new HostFacts
         {
@@ -32,7 +33,7 @@ public class DiagnosisEngineTests
             Connectivity = new ConnectivityFact
             {
                 GatewayReachable = true,
-                GatewayRttMs = 2,
+                GatewayRttMs = gwRtt,
                 PublicDnsReachable = publicOk,
                 NameResolutionWorks = namesOk
             }
@@ -68,6 +69,75 @@ public class DiagnosisEngineTests
         var report = new DiagnosisEngine().Evaluate(BaseLan(namesOk: false, publicOk: false));
         Assert.Contains(report.Results, r => r.FlowId == "CAPTIVE_PORTAL");
         Assert.Contains(report.RankedSolutions, s => s.Id == "open_portal");
+    }
+
+    [Fact]
+    public void Engine_registers_ten_flows()
+    {
+        var ids = new DiagnosisEngine().FlowIds;
+        Assert.Equal(10, ids.Count);
+        Assert.Contains("ADAPTER_ALL_DOWN", ids);
+        Assert.Contains("HIGH_LATENCY_GW", ids);
+        Assert.Contains("NO_DNS_CONFIG", ids);
+        Assert.Contains("WAN_PARTIAL_FAIL", ids);
+    }
+
+    [Fact]
+    public void Adapter_all_down_matches()
+    {
+        var facts = new HostFacts
+        {
+            Adapters =
+            [
+                new AdapterFact { Name = "Wi-Fi", IsUp = false, Status = "Down", IPv4Addresses = [] }
+            ],
+            Connectivity = new ConnectivityFact()
+        };
+        var report = new DiagnosisEngine().Evaluate(facts);
+        Assert.Contains(report.Results, r => r.FlowId == "ADAPTER_ALL_DOWN");
+        Assert.Contains(report.RankedSolutions, s => s.Id == "enable_adapter");
+    }
+
+    [Fact]
+    public void High_latency_gateway_matches()
+    {
+        var report = new DiagnosisEngine().Evaluate(BaseLan(gwRtt: 120));
+        Assert.Contains(report.Results, r => r.FlowId == "HIGH_LATENCY_GW");
+        Assert.Contains(report.RankedSolutions, s => s.Id == "check_wifi_signal");
+    }
+
+    [Fact]
+    public void No_dns_config_matches()
+    {
+        var facts = BaseLan();
+        facts = new HostFacts
+        {
+            Adapters =
+            [
+                new AdapterFact
+                {
+                    Name = "Ethernet",
+                    IsUp = true,
+                    Status = "Up",
+                    IPv4Addresses = ["192.168.1.10"],
+                    DnsServers = []
+                }
+            ],
+            DefaultGateways = facts.DefaultGateways,
+            DnsServers = [],
+            Connectivity = facts.Connectivity
+        };
+        var report = new DiagnosisEngine().Evaluate(facts);
+        Assert.Contains(report.Results, r => r.FlowId == "NO_DNS_CONFIG");
+        Assert.Contains(report.RankedSolutions, s => s.Id == "set_public_dns");
+    }
+
+    [Fact]
+    public void Wan_partial_fail_matches()
+    {
+        var report = new DiagnosisEngine().Evaluate(BaseLan(publicOk: false));
+        Assert.Contains(report.Results, r => r.FlowId == "WAN_PARTIAL_FAIL");
+        Assert.Contains(report.RankedSolutions, s => s.Id == "check_isp");
     }
 
     [Fact]
