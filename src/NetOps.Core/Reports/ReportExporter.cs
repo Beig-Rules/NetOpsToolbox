@@ -171,7 +171,7 @@ public static class ReportExporter
             }
             sb.AppendLine("</ul><p>Solutions:</p><ul>");
             foreach (var s in diagnosis.RankedSolutions)
-                sb.AppendLine("<li>#" + s.Score + " [" + WebUtility.HtmlEncode(s.Risk) + "] " +
+                sb.AppendLine("<li>#" + s.Score + " [" + WebUtility.HtmlEncode(s.Risk.ToString()) + "] " +
                               WebUtility.HtmlEncode(s.Title) + "</li>");
             sb.AppendLine("</ul></div>");
         }
